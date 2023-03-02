@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+import os
+from setuptools import setup, find_packages
+import translator
+
+with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
+    long_description = f.read()
+
+
+setup(
+    name='translator',
+    author='Danny Waser',
+    version=translator.__version__,
+    license='LICENSE',
+    url='https://github.com/wasertech/Translator',
+    description='Translate from one language to another.',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    packages=find_packages('.'),
+    python_requires='>=3.8,<3.11',
+    install_requires = [
+        'transformers~=4.25.1',
+    ],
+    entry_points={
+        'console_scripts': [
+            'translate = translator.main:main',
+        ]
+    },
+)
