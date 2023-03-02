@@ -63,7 +63,7 @@ from translator import Translator
 translator = Translator("eng_Latn", "fra_Latn")
 
 english_sentence = "This is just a simple phrase."
-french_sentence = translator.translate(args.sentence)
+french_sentence = translator.translate(english_sentence)
 
 print(f"{english_sentence=}")
 print(f"{french_sentence=}")
