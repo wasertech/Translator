@@ -104,4 +104,4 @@ Idem for any licence.
 
 I love stars ⭐ but also chocolate 🍫 so don't hesitate to [sponsor this project](https://github.com/sponsors/wasertech)!
 
-Otherwise if you like the project and want to see it grow and get more convenance feature like a dedicated service/client to speed up multiple translations. Don't hesitate to share your ideas by opening a ticket or even proposing a pull request.
+Otherwise if you like the project and want to see it grow and get more convenience features like a dedicated service/client to speed up multiple translations. Don't hesitate to share your ideas by opening a ticket or even proposing a pull request.
