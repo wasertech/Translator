@@ -24,9 +24,9 @@ Using `translate` from your favorite shell.
 
 ```zsh
 ❯ translate --help
-usage: translate [-h] [-v] [-s SOURCE] [-t TARGET] [-l MAX_LENGTH] [-m MODEL_ID]
-               [-p PIPELINE] [-L]
-               [sentence ...]
+usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-s SOURCE] [-t TARGET]
+                 [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-L]
+                 [sentence ...]
 
 Translate from one language to another.
 
@@ -36,6 +36,10 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -v, --version         shows the current version of translator
+  -d DIRECTORY, --directory DIRECTORY
+                        Path to directory to translate in batch instead of
+                        unique sentence.
+  -S SAVE, --save SAVE  Path to text file to save translations.
   -s SOURCE, --source SOURCE
                         Source language to translate.
   -t TARGET, --target TARGET
@@ -53,6 +57,26 @@ Cette phrase peut être transcrite dans n\'importe quelle langue maintenant.
 
 ❯ translate -s eng_Latn -t spa_Latn "This sentence can be transcribed in any language now."
 Esta frase puede ser transcrita en cualquier idioma ahora.
+
+# Loading sentences from text files in directory
+# and save the translation to a text file
+❯ translate -d . -S french.txt -s eng_Latn -t fra_Latn
+No sentence was given but directory was.
+Loading batch of sentences from .
+sentence=This is a sentence in another file.
+translation="C'est une phrase dans un autre dossier."
+sentence=This is a sentence.
+translation="C'est une phrase."
+sentence=This is another sentence.
+translation="C'est une autre phrase."
+❯ cat french.txt
+───────┬──────────────────────────────────────────────────────────────────────────
+       │ File: french.txt
+───────┼──────────────────────────────────────────────────────────────────────────
+   1   │ C'est une phrase dans un autre dossier.
+   2   │ C'est une phrase.
+   3   │ C'est une autre phrase.
+───────┴──────────────────────────────────────────────────────────────────────────
 ```
 
 Using `Translator` with `python`.
