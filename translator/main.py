@@ -1,9 +1,10 @@
 import sys
 
-from glob import glob
+from multiprocessing import Queue, Process
+from threading import Thread
 from pathlib import Path
 from argparse import ArgumentParser
-from translator import Translator, LANGS, __version__
+from translator import Translator, LANGS, utils, __version__
 
 def parse_arguments():
     argument_parse = ArgumentParser(description="Translate from one language to another.")
@@ -18,23 +19,10 @@ def parse_arguments():
     argument_parse.add_argument('-p', '--pipeline', default="translation", help="Pipeline task to use.")
     argument_parse.add_argument('-L', '--language_list', action='store_true', help="Show list of languages.")
 
-
     return argument_parse.parse_args()
 
-def save_txt(translations, file_path):
-    with open(file_path, 'w') as f:
-        f.write("\n".join(translations))
-
-def read_txt(filepath):
-    with open(filepath, 'r') as f:
-        return f.read().split("\n")
-
-def read_txt_files(directory):
-    r = []
-    for f in glob(f"{directory}/*.txt"):
-        for l in read_txt(f):
-            r.append(l)
-    return r
+def translate_sentence(sentence, translator):
+    return translator.translate(sentence)
 
 def main():
     args = parse_arguments()
@@ -50,29 +38,50 @@ def main():
         print()
         sys.exit(0)
 
+    print("Preparing to translate...")
+    print("Please be patient.")
+
     translator = Translator(args.source, args.target, args.max_length, args.model_id, args.pipeline)
 
     translations = []
 
     if not args.sentence and Path(args.directory).exists():
-        print("No sentence was given but directory was.")
-        print(f"Loading batch of sentences from {args.directory}")
-        sentences = read_txt_files(args.directory)
-        for s in sentences:
-            print(f"sentence={s}")
-            translation = translator.translate(s)
-            print(f"{translation=}")
-            translations.append(translation)
+        print("No sentence was given but directory was provided.")
+        print(f"Translating sentences in {args.source} to {args.target} from text files in directory \'{args.directory}\'")
+        source_path = args.directory
+        output_path = args.save
+        print("Translating files...")
+        txt_files = utils.glob_files_from_dir(source_path, suffix=".txt")
+        print(f"Found {len(txt_files)} text file{'s' if len(txt_files) > 1 else ''}.")
+        for _f in txt_files:
+            print(f"Translating file {_f}...")
+            translated_sentences = []
+            with open(_f) as f:
+                for sentence in f.readlines():
+                    sentence = sentence.strip().replace("\n", "")
+                    print(f"Translating \"{sentence}\"...")
+                    translation = translate_sentence(sentence, translator)
+                    print(f"Translated as \"{translation}\".")
+                    translated_sentences.append(translation)
+            if args.save:
+                translations += translated_sentences
+                utils.save_txt(translated_sentences, _f.replace(".txt", f"{translator.source}-{translator.target}.txt"))
+                
+        print(f"All files in {args.directory} have been translated from {args.source} to {args.target}.")
     else:
-        translation = translator.translate(args.sentence)
+        translation = translate_sentence(args.sentence, translator)
         print(translation)
         translations.append(translation)
     
     if args.save:
         if not Path(args.save).exists():
-            save_txt(translations, Path(args.save))
+            utils.save_txt(translations, Path(args.save))
         else:
-            print(f"{args.save} exists already. Please specify another path or remove {args.save}.") 
+            print(f"{args.save} exists already. Please specify another path or (re)move {args.save}.")
+            print("What? Do you expect this program to append to the end of the file in this case?")
+            print("It still would require user input confirmation but it can be done.")
+            print(f"But not with this version of Translator ({__version__}).")
+            print("Feel free to open a pull request: https://github.com/wasertech/Translator")
 
 if __name__ == "__main__":
     try:
