@@ -92,13 +92,14 @@ def main():
                     utils.save_txt(translated_sentences, _t)
                     
             print(f"All files in {args.directory} have been translated from {args.source} to {args.target}.")
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
             print("You are about to loose your progress!")
             print("Let me at least save the current progress.")
             print("You can thank me later.")
             utils.save_txt(translated_sentences, _b)
             print("Done.")
             print("You're welcome.")
+            raise e
     else:
         translation = translate_sentence(args.sentence, translator)
         print(translation)
