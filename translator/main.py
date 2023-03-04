@@ -99,7 +99,7 @@ def main():
             utils.save_txt(translated_sentences, _b)
             print("Done.")
             print("You're welcome.")
-            raise e
+            sys.exit(1)
     else:
         translation = translate_sentence(args.sentence, translator)
         print(translation)
