@@ -1,14 +1,19 @@
 import time
 
+from pathlib import Path
 from glob import glob
 
-def save_txt(translations, file_path):
-    with open(file_path, 'w') as f:
+def save_txt(translations, file_path, append=False):
+    with open(file_path, 'w' if not append else 'a') as f:
         f.write("\n".join(translations))
 
 def read_txt(filepath):
-    with open(filepath, 'r') as f:
-        return f.read().split("\n")
+    p = Path(filepath)
+    if p.exists() and p.is_file():
+        with open(p, 'r') as f:
+            return f.read().split("\n")
+    else:
+        return []
 
 def glob_files_from_dir(directory, suffix=".txt"):
     return glob(f"{directory}/*{suffix}")

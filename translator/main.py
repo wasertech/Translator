@@ -1,4 +1,4 @@
-import sys
+import os, sys
 
 from multiprocessing import Queue, Process
 from threading import Thread
@@ -54,18 +54,34 @@ def main():
         txt_files = utils.glob_files_from_dir(source_path, suffix=".txt")
         print(f"Found {len(txt_files)} text file{'s' if len(txt_files) > 1 else ''}.")
         for _f in txt_files:
-            print(f"Translating file {_f}...")
-            translated_sentences = []
-            with open(_f) as f:
-                for sentence in f.readlines():
-                    sentence = sentence.strip().replace("\n", "")
-                    print(f"Translating \"{sentence}\"...")
-                    translation = translate_sentence(sentence, translator)
-                    print(f"Translated as \"{translation}\".")
-                    translated_sentences.append(translation)
+            _t = _f.replace(".txt", f"{translator.source}-{translator.target}.txt")
+            if not Path(_t).exists():
+                print(f"Translating file {_f}...")
+                _b = _f.replace('.txt', f'.{translator.target}.tmp.txt')
+                translated_sentences = utils.read_txt(_b)
+                _i = 0
+                i = len(translated_sentences) - 1
+                with open(_f) as f:
+                    for sentence in f.readlines():
+                        if _i >= 100 and self.save:
+                            print("Saving buffer...")
+                            utils.save_txt(translated_sentences, _b)
+                        if sentence not in translated_sentences:
+                            sentence = sentence.strip().replace("\n", "")
+                            print(f"Translating \"{sentence}\"...")
+                            translation = translate_sentence(sentence, translator)
+                            print(f"Translated as \"{translation}\".")
+                            translated_sentences.append(translation)
+                            _i += 1
+                
+                if Path(_b).exists():
+                    os.remove(_b)
+            elif args.save:
+                print(f"Translated file {_f}.")
+
             if args.save:
                 translations += translated_sentences
-                utils.save_txt(translated_sentences, _f.replace(".txt", f"{translator.source}-{translator.target}.txt"))
+                utils.save_txt(translated_sentences, _t)
                 
         print(f"All files in {args.directory} have been translated from {args.source} to {args.target}.")
     else:
