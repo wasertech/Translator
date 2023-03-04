@@ -70,11 +70,12 @@ def main():
                     with open(_f) as f:
                         _lines = tqdm(f.readlines(), position=0)
                         for sentence in _lines:
-                            if _i >= 100 and args.save:
-                                _lines.set_description("Saving buffer...")
-                                utils.save_txt(translated_sentences, _b)
-                                _i = 0
                             if sentence not in translated_sentences:
+                                if _i >= 100 and args.save:
+                                    _lines.set_description("Saving buffer...")
+                                    utils.save_txt(translated_sentences, _b)
+                                    _i = 0
+                                
                                 sentence = sentence.strip().replace("\n", "")
                                 _lines.set_description(f"Translating \"{sentence}\"...")
                                 translation = translate_sentence(sentence, translator)
