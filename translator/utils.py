@@ -16,7 +16,7 @@ def read_txt(filepath):
         return []
 
 def glob_files_from_dir(directory, suffix=".txt"):
-    return list(set(glob(f"{directory}/*{suffix}")) - set(glob(f"{directory}/*.tmp.{suffix}")))
+    return list(set(glob(f"{directory}/*[!.tmp]{suffix}")) - set(glob(f"{directory}/*.tmp.{suffix}")))
 
 def read_txt_files(directory):
     r = []
