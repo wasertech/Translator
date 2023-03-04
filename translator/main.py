@@ -6,6 +6,8 @@ from pathlib import Path
 from argparse import ArgumentParser
 from translator import Translator, LANGS, utils, __version__
 
+from tqdm import tqdm
+
 def parse_arguments():
     argument_parse = ArgumentParser(description="Translate from one language to another.")
     argument_parse.add_argument('-v', '--version', action='store_true', help="shows the current version of translator")
@@ -52,34 +54,37 @@ def main():
         output_path = args.save
         print("Translating files...")
         txt_files = utils.glob_files_from_dir(source_path, suffix=".txt")
-        print(f"Found {len(txt_files)} text file{'s' if len(txt_files) > 1 else ''}.")
+        _l = len(txt_files)
+        print(f"Found {_l} text file{'s' if _l > 1 else ''}.")
         
         try:
-            for _f in txt_files:
+            _files = tqdm(txt_files, position=1)
+            for _f in _files:
                 _t = _f.replace(".txt", f"{translator.source}-{translator.target}.txt")
                 if not Path(_t).exists():
-                    print(f"Translating file {_f}...")
+                    _files.set_description(f"Translating file {_f}...")
                     _b = _f.replace('.txt', f'.{translator.target}.tmp.txt')
                     translated_sentences = utils.read_txt(_b)
                     _i = 0
                     i = len(translated_sentences) - 1
                     with open(_f) as f:
-                        for sentence in f.readlines():
+                        _lines = tqdm(f.readlines(), position=0)
+                        for sentence in _lines:
                             if _i >= 100 and args.save:
-                                print("Saving buffer...")
+                                _lines.set_description("Saving buffer...")
                                 utils.save_txt(translated_sentences, _b)
                             if sentence not in translated_sentences:
                                 sentence = sentence.strip().replace("\n", "")
-                                print(f"Translating \"{sentence}\"...")
+                                _lines.set_description(f"Translating \"{sentence}\"...")
                                 translation = translate_sentence(sentence, translator)
-                                print(f"Translated as \"{translation}\".")
+                                _lines.set_description(f"Translated as \"{translation}\".")
                                 translated_sentences.append(translation)
                                 _i += 1
                     
                     if Path(_b).exists():
                         os.remove(_b)
                 elif args.save:
-                    print(f"Translated file {_f}.")
+                    _files.set_description(f"Translated file {_f}.")
 
                 if args.save:
                     translations += translated_sentences
