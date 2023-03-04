@@ -65,7 +65,7 @@ def main():
                     i = len(translated_sentences) - 1
                     with open(_f) as f:
                         for sentence in f.readlines():
-                            if _i >= 100 and self.save:
+                            if _i >= 100 and args.save:
                                 print("Saving buffer...")
                                 utils.save_txt(translated_sentences, _b)
                             if sentence not in translated_sentences:
