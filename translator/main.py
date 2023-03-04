@@ -58,33 +58,52 @@ def main():
         print(f"Found {_l} text file{'s' if _l > 1 else ''}.")
         
         try:
+            # Load files
             _files = tqdm(txt_files, position=1)
             for _f in _files:
                 _t = _f.replace(".txt", f"{translator.source}-{translator.target}.txt")
                 if not Path(_t).exists():
                     _files.set_description(f"Translating file {_f}...")
-                    _b = _f.replace('.txt', f'.{translator.target}.tmp.txt')
-                    translated_sentences = utils.read_txt(_b)
+                    
+                    # Load buffers
+                    _b1 = _f.replace('.txt', f'.{translator.target}.tmp.txt')
+                    _b2 = _f.replace('.txt', f'.{translator.source}.tmp.txt')
+                    
+                    translated_sentences = utils.read_txt(_b1)
+                    _translated_sentences = utils.read_txt(_b2)
+                    
+                    # Load sentences
                     _i = 0
                     i = len(translated_sentences) - 1
                     with open(_f) as f:
                         _lines = tqdm(f.readlines(), position=0)
                         for sentence in _lines:
-                            if sentence not in translated_sentences:
+                            # Translate sentence
+                            sentence = sentence.strip().replace("\n", "")
+                            
+                            # If not already translated
+                            if sentence not in _translated_sentences:
+                                _translated_sentences.append(sentence)
+                                # If buffer is too big save it
                                 if _i >= 100 and args.save:
                                     _lines.set_description("Saving buffer...")
-                                    utils.save_txt(translated_sentences, _b)
+                                    utils.save_txt(_translated_sentences, _b2)
+                                    utils.save_txt(translated_sentences, _b1)
                                     _i = 0
-                                
-                                sentence = sentence.strip().replace("\n", "")
+
+                                # Translate sentence
                                 _lines.set_description(f"Translating \"{sentence}\"...")
                                 translation = translate_sentence(sentence, translator)
                                 _lines.set_description(f"Translated as \"{translation}\".")
-                                translated_sentences.append(translation)
+                                
+                                # Save translation if not already
+                                if translation not in translated_sentences:
+                                    translated_sentences.append(translation)
                                 _i += 1
                     
                     if Path(_b).exists():
-                        os.remove(_b)
+                        os.remove(_b1)
+                        os.remove(_b2)
                 elif args.save:
                     _files.set_description(f"Translated file {_f}.")
 
@@ -97,7 +116,8 @@ def main():
             print("You are about to loose your progress!")
             print("Let me at least save the current progress.")
             print("You can thank me later.")
-            utils.save_txt(translated_sentences, _b)
+            utils.save_txt(_translated_sentences, _b2)
+            utils.save_txt(translated_sentences, _b1)
             print("Done.")
             print("You're welcome.")
             sys.exit(1)
