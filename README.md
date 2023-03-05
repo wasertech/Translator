@@ -3,8 +3,8 @@
 
 ```zsh
 # Translate [FROM] [TO] [SENTENCE]
-❯ translate eng_Latn fra_Latn "Any sentence you would like."
-Quelle que soit la phrase que vous voulez.
+❯ translate fra_Latn eng_Latn "Traduisez quelle que soit la phrase que vous voulez."
+Translate whatever sentence you want.
 ```
 
 Uses Meta's NLLB model [`facebook/nllb-200-distilled-600M`](https://huggingface.co/facebook/nllb-200-distilled-600M) by default. You can change it by passing a custom flag `--model_id`.
