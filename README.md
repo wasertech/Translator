@@ -66,7 +66,7 @@ Esta frase puede ser transcrita en cualquier idioma ahora.
 ❯ cat ./*.eng_Latn.tmp.txt | tail -n 1
 ❯ cat ./*.fra_Latn.tmp.txt | tail -n 1
 # This allows for interuptions in the process
-# translation are saved:
+# At the end of the process, translation are saved:
 # under each respective file
 ❯ cat ./*.fra_Latn.txt
 # and if flag --save (-S) has been given
