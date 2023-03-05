@@ -49,7 +49,7 @@ options:
   -L, --language_list   Show list of languages.
 ```
 
-You can `translate` `from` on language `to` another, any `sentence` you would like.
+You can `translate` `from` one language `to` another, any `sentence` you would like.
 
 ```zsh
 # Translate from English in French
