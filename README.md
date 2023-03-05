@@ -66,9 +66,9 @@ Esta frase puede traducirse a cualquier idioma ahora.
 ❯ ls ./*.eng_Latn.tmp.txt
 ❯ ls ./*.fra_Latn.tmp.txt
 # This allows for interuptions in the process...
-# At the end of the process
 ❯ fg
-# Only when all sentences have been translated, result is saved:
+# At the end of the process,
+# only when all sentences have been translated, result is saved:
 # -   under each respective file
 ❯ ls ./*.fra_Latn.txt
 # -   under --save (-S) if given
