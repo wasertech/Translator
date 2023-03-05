@@ -58,25 +58,19 @@ Cette phrase peut être transcrite dans n\'importe quelle langue maintenant.
 ❯ translate -s eng_Latn -t spa_Latn "This sentence can be transcribed in any language now."
 Esta frase puede ser transcrita en cualquier idioma ahora.
 
-# Loading sentences from text files in directory
+# Loading sentences from text files in current directory
 # and save the translation to a text file
-❯ translate -d . -S french.txt -s eng_Latn -t fra_Latn
-No sentence was given but directory was.
-Loading batch of sentences from .
-sentence=This is a sentence in another file.
-translation="C'est une phrase dans un autre dossier."
-sentence=This is a sentence.
-translation="C'est une phrase."
-sentence=This is another sentence.
-translation="C'est une autre phrase."
-❯ cat french.txt
-───────┬──────────────────────────────────────────────────────────────────────────
-       │ File: french.txt
-───────┼──────────────────────────────────────────────────────────────────────────
-   1   │ C'est une phrase dans un autre dossier.
-   2   │ C'est une phrase.
-   3   │ C'est une autre phrase.
-───────┴──────────────────────────────────────────────────────────────────────────
+❯ translate -d . -S en2fr.txt -s eng_Latn -t fra_Latn
+# during the translation process
+# two buffer files are create
+❯ cat ./*.eng_Latn.tmp.txt | tail -n 1
+❯ cat ./*.fra_Latn.tmp.txt | tail -n 1
+# This allows for interuptions in the process
+# translation are saved:
+# under each respective file
+❯ cat ./*.fra_Latn.txt
+# and if flag --save (-S) has been given
+❯ cat en2fr.txt
 ```
 
 Using `Translator` with `python`.
