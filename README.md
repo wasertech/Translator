@@ -23,27 +23,23 @@ which translate
 Using `translate` from your favorite shell.
 
 ```zsh
+# Meet Translate
 ❯ translate --help
-usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-s SOURCE] [-t TARGET]
-                 [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-L]
-                 [sentence ...]
+usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-L] _from _to [sentence ...]
 
-Translate from one language to another.
+Translate [FROM one language] [TO another].
 
 positional arguments:
+  _from                 Source language to translate from.
+  _to                   Target language to translate towards.
   sentence              Something to translate.
 
 options:
   -h, --help            show this help message and exit
   -v, --version         shows the current version of translator
   -d DIRECTORY, --directory DIRECTORY
-                        Path to directory to translate in batch instead of
-                        unique sentence.
+                        Path to directory to translate in batch instead of unique sentence.
   -S SAVE, --save SAVE  Path to text file to save translations.
-  -s SOURCE, --source SOURCE
-                        Source language to translate.
-  -t TARGET, --target TARGET
-                        Target language to translate.
   -l MAX_LENGTH, --max_length MAX_LENGTH
                         Max length of output.
   -m MODEL_ID, --model_id MODEL_ID
@@ -52,25 +48,32 @@ options:
                         Pipeline task to use.
   -L, --language_list   Show list of languages.
 
-❯ translate --source eng_Latn --target fra_Latn "This sentence can be transcribed in any language now."
-Cette phrase peut être transcrite dans n\'importe quelle langue maintenant.
 
-❯ translate -s eng_Latn -t spa_Latn "This sentence can be transcribed in any language now."
-Esta frase puede ser transcrita en cualquier idioma ahora.
+# Translate from English in French
+❯ translate eng_Latn fra_Latn "This sentence can be translated in any language now."
+Cette phrase peut être traduite dans n\'importe quelle langue maintenant.
 
-# Loading sentences from text files in current directory
-# and save the translation to a text file
-❯ translate -d . -S en2fr.txt -s eng_Latn -t fra_Latn
+# Translate from English in Spanish
+❯ translate eng_Latn spa_Latn "This sentence can be translated in any language now."
+Esta frase puede traducirse a cualquier idioma ahora.
+
+# Loading sentences from text files from  --directory (-d)
+# and --save (-S) the translated sentences to a text file
+❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn & bg
 # during the translation process
-# two buffer files are create
-❯ cat ./*.eng_Latn.tmp.txt | tail -n 1
-❯ cat ./*.fra_Latn.tmp.txt | tail -n 1
-# This allows for interuptions in the process
-# At the end of the process, translation are saved:
-# under each respective file
-❯ cat ./*.fra_Latn.txt
-# and if flag --save (-S) has been given
-❯ cat en2fr.txt
+# two buffer files are created
+❯ ls ./*.eng_Latn.tmp.txt
+❯ ls ./*.fra_Latn.tmp.txt
+# This allows for interuptions in the process...
+# At the end of the process
+❯ fg
+# Only when all sentences have been translated, result is saved:
+# -   under each respective file
+❯ ls ./*.fra_Latn.txt
+# -   under --save (-S) if given
+❯ cat en2fr.txt | head
+# Buffers are also removed
+❯ ls *.tmp.txt
 ```
 
 Using `Translator` with `python`.
@@ -92,6 +95,7 @@ print(f"{french_sentence=}")
 Depending on models used, you might get fewer choices but with `NLLB` you get more than 200 most popular ones.
 
 ```zsh
+# translate -L
 ❯ translate --language_list
 Language list:
     ...

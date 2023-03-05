@@ -9,13 +9,13 @@ from translator import Translator, LANGS, utils, __version__
 from tqdm import tqdm
 
 def parse_arguments():
-    argument_parse = ArgumentParser(description="Translate from one language to another.")
+    argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another].")
     argument_parse.add_argument('-v', '--version', action='store_true', help="shows the current version of translator")
+    argument_parse.add_argument('_from', nargs=1, help="Source language to translate from.")
+    argument_parse.add_argument('_to', nargs=1, help="Target language to translate towards.")
     argument_parse.add_argument('sentence', nargs="*", help="Something to translate.")
     argument_parse.add_argument('-d', '--directory', type=str, help="Path to directory to translate in batch instead of unique sentence.")
     argument_parse.add_argument('-S', '--save', type=str, help="Path to text file to save translations.")
-    argument_parse.add_argument('-s', '--source', default="eng_Latn", help="Source language to translate.")
-    argument_parse.add_argument('-t', '--target', default="fra_Latn", help="Target language to translate.")
     argument_parse.add_argument('-l', '--max_length', default=500, help="Max length of output.")
     argument_parse.add_argument('-m', '--model_id', default="facebook/nllb-200-distilled-600M", help="HuggingFace model ID to use.")
     argument_parse.add_argument('-p', '--pipeline', default="translation", help="Pipeline task to use.")
@@ -43,13 +43,22 @@ def main():
     print("Preparing to translate...")
     print("Please be patient.")
 
-    translator = Translator(args.source, args.target, args.max_length, args.model_id, args.pipeline)
+    _from, _to = args._from[0], args._to[0]
+
+    for _lang in [_from, _to]:
+        if _lang not in LANGS and args.model_id == "facebook/nllb-200-distilled-600M":
+            print(f"Warning! {_lang=} is not in listed as supported by the current model.")
+            print("There is a high probability translation operations will fail.")
+            print("Type translate --language_list to get the full list of supported languages.")
+            print("Or type translate --help to get help.")
+
+    translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline)
 
     translations = []
 
     if not args.sentence and Path(args.directory).exists():
         print("No sentence was given but directory was provided.")
-        print(f"Translating sentences in {args.source} to {args.target} from text files in directory \'{args.directory}\'")
+        print(f"Translating sentences in {args._from} to {args._to} from text files in directory \'{args.directory}\'")
         source_path = args.directory
         output_path = args.save
         print("Translating files...")
@@ -120,9 +129,10 @@ def main():
             utils.save_txt(translated_sentences, _b1)
             print("Done.")
             print("You're welcome.")
+            print("Quitting now.")
             sys.exit(1)
     else:
-        translation = translate_sentence(args.sentence, translator)
+        translation = translate_sentence(" ".join(args.sentence), translator)
         print(translation)
         translations.append(translation)
     
@@ -130,11 +140,10 @@ def main():
         if not Path(args.save).exists():
             utils.save_txt(translations, Path(args.save))
         else:
-            print(f"{args.save} exists already. Please specify another path or (re)move {args.save}.")
-            print("What? Do you expect this program to append to the end of the file in this case?")
-            print("It still would require user input confirmation but it can be done.")
-            print(f"But not with this version of Translator ({__version__}).")
-            print("Feel free to open a pull request: https://github.com/wasertech/Translator")
+            print(f"{args.save} exists already.")
+            print("Please mind the following fact:")
+            print("Translated sentences will be added at the end of the file.")
+            utils.save_txt(translations, Path(args.save), append=True)
 
 if __name__ == "__main__":
     try:
