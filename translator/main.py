@@ -9,7 +9,7 @@ from translator import Translator, LANGS, utils, __version__
 from tqdm import tqdm
 
 def parse_arguments():
-    argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another].")
+    argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another], [any SENTENCE you would like].")
     argument_parse.add_argument('-v', '--version', action='store_true', help="shows the current version of translator")
     argument_parse.add_argument('_from', nargs=1, help="Source language to translate from.")
     argument_parse.add_argument('_to', nargs=1, help="Target language to translate towards.")

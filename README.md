@@ -27,7 +27,7 @@ Using `translate` from your favorite shell.
 ❯ translate --help
 usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-L] _from _to [sentence ...]
 
-Translate [FROM one language] [TO another].
+Translate [FROM one language] [TO another], [any SENTENCE you would like].
 
 positional arguments:
   _from                 Source language to translate from.
