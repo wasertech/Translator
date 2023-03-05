@@ -2,8 +2,9 @@
 *`Translate`* *`from` one language* *`to` another*, *any `sentence` you would like*.
 
 ```zsh
-❯ translate eng_Latn fra_Latn "This is an original sentence."
-Ceci est une phrase originale.
+# Translate [FROM] [TO] [SENTENCE]
+❯ translate eng_Latn fra_Latn "Any sentence you would like."
+Quelle que soit la phrase que vous voulez.
 ```
 
 Uses Meta's NLLB model [`facebook/nllb-200-distilled-600M`](https://huggingface.co/facebook/nllb-200-distilled-600M) by default. You can change it by passing a custom flag `--model_id`.
@@ -57,7 +58,7 @@ Cette phrase peut être traduite dans n\'importe quelle langue maintenant.
 ❯ translate eng_Latn spa_Latn "This sentence can be translated in any language now."
 Esta frase puede traducirse a cualquier idioma ahora.
 
-# Loading sentences from text files from  --directory (-d)
+# Loading sentences from text files from --directory (-d)
 # and --save (-S) the translated sentences to a text file
 ❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn & bg
 # during the translation process
