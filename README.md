@@ -64,8 +64,8 @@ Esto es español.
 You can also easily `translate` files from a `--directory` and `--save` to a file.
 
 ```zsh
-# Loading sentences from text files from --directory (-d)
-# and --save (-S) the translated sentences to a text file
+# Loading sentences from text files in --directory (-d)
+# and --save (-S) the translated sentences in a text file
 ❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn & bg
 # during the translation process
 # two buffer files are created
