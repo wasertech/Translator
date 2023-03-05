@@ -2,7 +2,7 @@
 *`Translate`* *`from` one language* *`to` another*, *any `sentence` you would like*.
 
 ```zsh
-❯ translate --source eng_Latn --target fra_Latn "This is an original sentence."
+❯ translate eng_Latn fra_Latn "This is an original sentence."
 Ceci est une phrase originale.
 ```
 
