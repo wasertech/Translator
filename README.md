@@ -24,7 +24,6 @@ which translate
 Using `translate` from your favorite shell.
 
 ```zsh
-# Meet Translate
 ❯ translate --help
 usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-L] _from _to [sentence ...]
 
@@ -48,16 +47,23 @@ options:
   -p PIPELINE, --pipeline PIPELINE
                         Pipeline task to use.
   -L, --language_list   Show list of languages.
+```
 
+You can `translate` `from` on language `to` another, any `sentence` you would like.
 
+```zsh
 # Translate from English in French
-❯ translate eng_Latn fra_Latn "This sentence can be translated in any language now."
-Cette phrase peut être traduite dans n\'importe quelle langue maintenant.
+❯ translate eng_Latn fra_Latn "This is French."
+C\'est français.
 
 # Translate from English in Spanish
-❯ translate eng_Latn spa_Latn "This sentence can be translated in any language now."
-Esta frase puede traducirse a cualquier idioma ahora.
+❯ translate eng_Latn spa_Latn "This is Spanish."
+Esto es español.
+```
 
+You can also easily `translate` files from a `--directory` and `--save` to a file.
+
+```zsh
 # Loading sentences from text files from --directory (-d)
 # and --save (-S) the translated sentences to a text file
 ❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn & bg
