@@ -173,7 +173,7 @@ def main():
                 spinner.info("Partial translation has been saved.")
             sys.exit(1)
     else:
-        translation = translate_sentence(args.sentence, translator)
+        translation = translate_sentence(args.sentences, translator)
         for t in translation: print(t)
         translations.append(translation)
     
