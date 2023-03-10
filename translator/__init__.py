@@ -1,6 +1,6 @@
 from translator.translate import Translator
 
-__version__ = "0.0.1b4"
+__version__ = "0.0.2b1"
 
 LANGS = [
     "ace_Arab",

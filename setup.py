@@ -21,6 +21,7 @@ setup(
     install_requires = [
         'transformers~=4.25.1',
         'langcodes~=3.3.0',
+        'datasets~=2.10.1',
     ],
     entry_points={
         'console_scripts': [

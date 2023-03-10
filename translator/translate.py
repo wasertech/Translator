@@ -32,7 +32,7 @@ class Translator:
         )
         logger.debug("Translator has been successfully loaded.")
 
-    def translate(self, sentence: str):
-        return self.translator(sentence)[0]['translation_text']
+    def translate(self, to_translate):
+        return [x['translation_text'] for x in self.translator(to_translate)]
 
 

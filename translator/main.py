@@ -5,7 +5,10 @@ from multiprocessing import Queue, Process
 from threading import Thread
 from pathlib import Path
 from argparse import ArgumentParser
+from datasets import load_dataset
+from halo import Halo
 from translator import Translator, LANGS, utils, __version__
+
 
 from tqdm import tqdm
 
@@ -33,7 +36,9 @@ def translate_sentence(sentence, translator):
 
 def main():
     args = parse_arguments()
-        
+
+    spinner = Halo(spinner="pong")
+
     if args.language_list:
         print("Language list:")
         for l in LANGS:
@@ -41,18 +46,17 @@ def main():
         print()
         sys.exit(0)
 
-    print("Preparing to translate...")
-    print("Please be patient.")
-
     _from, _to = "".join(args._from), "".join(args._to)
 
     if args.version:
         if _from == _to == "eng_Latn":
             print(f"Translator version: {__version__}")
         else:
+            spinner.start()
             translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline)
-            version = translator.translate(args.sentence)
-            print(version, " ", __version__)
+            version = translate_sentence(args.sentence, translator)
+            spinner.stop()
+            print(version[0], " ", __version__)
         sys.exit(0)
 
     for _lang in [_from, _to]:
@@ -62,11 +66,17 @@ def main():
             print("Type translate --language_list to get the full list of supported languages.")
             print("Or type translate --help to get help.")
 
+    #print("Preparing to translate...")
+    #print("Please be patient.")
+    spinner.start()
+
     translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline)
 
     translations = []
 
-    if Path(args.directory).exists():
+    spinner.stop()
+
+    if args.directory and Path(args.directory).exists():
         print("No sentence was given but directory was provided.")
         print(f"Translating sentences in {args._from} to {args._to} from text files in directory \'{args.directory}\'")
         print(f"Using {translator.device} to batch translate")
@@ -78,72 +88,24 @@ def main():
         print(f"Found {_l} text file{'s' if _l > 1 else ''}.")
         
         try:
-            # Load files
-            _files = tqdm(txt_files, position=1)
-            for _f in _files:
-                _t = _f.replace(".txt", f"{translator.source}-{translator.target}.txt")
-                if not Path(_t).exists():
-                    _files.set_description(f"Translating file {_f}...")
-                    
-                    # Load buffers
-                    _b1 = _f.replace('.txt', f'.{translator.target}.tmp.txt')
-                    _b2 = _f.replace('.txt', f'.{translator.source}.tmp.txt')
-                    
-                    translated_sentences = utils.read_txt(_b1)
-                    _translated_sentences = utils.read_txt(_b2)
-                    
-                    # Load sentences
-                    _i = 0
-                    i = len(translated_sentences) - 1
-                    with open(_f) as f:
-                        _lines = tqdm(f.readlines(), position=0)
-                        for sentence in _lines:
-                            # Translate sentence
-                            sentence = sentence.strip().replace("\n", "")
-                            
-                            # If not already translated
-                            if sentence not in _translated_sentences:
-                                _translated_sentences.append(sentence)
-                                # If buffer is too big save it
-                                if _i >= 100 and args.save:
-                                    _lines.set_description("Saving buffer...")
-                                    utils.save_txt(_translated_sentences, _b2)
-                                    utils.save_txt(translated_sentences, _b1)
-                                    _i = 0
+            print("Loading dataset...")
+            dataset = load_dataset('text', data_files={'translate': txt_files})
 
-                                # Translate sentence
-                                _lines.set_description(f"Translating \"{sentence[:min(len(sentence), 10)]}...\"...")
-                                translation = translate_sentence(sentence, translator)
-                                #_lines.set_description(f"Translated as \"{translation}\".")
-                                
-                                # Save translation if not already
-                                if translation not in translated_sentences:
-                                    translated_sentences.append(translation)
-                                _i += 1
-                    
-                    if Path(_b1).exists(): os.remove(_b1)
-                    if Path(_b2).exists(): os.remove(_b2)
-                elif args.save:
-                    _files.set_description(f"Translated file {_f}.")
-
-                if args.save:
-                    translations += translated_sentences
-                    utils.save_txt(translated_sentences, _t)
-                    
+            print("Translating dataset...")
+            print("Please wait. This can take a while depending on the amount of data and your computing platform.")
+            spinner.start()
+            
+            translations = translate_sentence(dataset['translate']['text'], translator)
+            
+            spinner.stop()
             print(f"All files in {args.directory} have been translated from {args.source} to {args.target}.")
         except KeyboardInterrupt as e:
+            print()
             print("You are about to loose your progress!")
-            print("Let me at least save the current progress.")
-            print("You can thank me later.")
-            utils.save_txt(_translated_sentences, _b2)
-            utils.save_txt(translated_sentences, _b1)
-            print("Done.")
-            print("You're welcome.")
-            print("Quitting now.")
             sys.exit(1)
     else:
-        translation = translate_sentence(" ".join(args.sentence), translator)
-        print(translation)
+        translation = translate_sentence(args.sentence, translator)
+        for t in translation: print(t)
         translations.append(translation)
     
     if args.save:
