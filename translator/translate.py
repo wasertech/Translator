@@ -33,6 +33,10 @@ class Translator:
         logger.debug("Translator has been successfully loaded.")
 
     def translate(self, to_translate):
-        return [x['translation_text'] for x in self.translator(to_translate)]
+        try:
+            return [x['translation_text'] for x in self.translator(to_translate)]
+        except UserWarning:
+            pass
+        
 
 
