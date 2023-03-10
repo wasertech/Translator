@@ -27,7 +27,7 @@ def parse_arguments():
     argument_parse.add_argument('-l', '--max_length', default=500, help="Max length of output.")
     argument_parse.add_argument('-m', '--model_id', default="facebook/nllb-200-distilled-600M", help="HuggingFace model ID to use.")
     argument_parse.add_argument('-p', '--pipeline', default="translation", help="Pipeline task to use.")
-    argument_parse.add_argument('-b', '--batch_size', default=1000, type=int, help="Number of sentences to batch for translation.")
+    argument_parse.add_argument('-b', '--batch_size', default=100, type=int, help="Number of sentences to batch for translation.")
     argument_parse.add_argument('-L', '--language_list', action='store_true', help="Show list of languages.")
     
 
