@@ -1,4 +1,5 @@
 import os, sys, psutil, time
+import locale
 
 from langcodes import closest_supported_match
 from multiprocessing import Queue, Process
@@ -9,8 +10,7 @@ from datasets import load_dataset
 from halo import Halo
 from translator import Translator, LANGS, utils, __version__
 
-
-from tqdm import tqdm
+locale.setlocale(locale.LC_ALL, '')
 
 def get_sys_lang_format():
     i18n = os.environ.get('LANG', "en_EN.UTF-8").split(".")[0]
@@ -120,14 +120,14 @@ def main():
             if Path(translated_input_path).exists() and Path(translated_input_path).is_file():
                 translated_dataset = load_dataset('text', data_files={'translated': [translated_input_path]}, streaming=False, split="translated", cache_dir=cache)
                 _translated = translated_dataset['text']
-                spinner.info(f"Translated {len(_translated)} sentences already.")
+                spinner.info(f"Translated {len(_translated):n} sentences already.")
                 spinner.start()
             else:
                 spinner.info("Not translated any sentences yet.")
                 spinner.start()
             time_after_1 = time.perf_counter()
             _td_1 = time_after_1 - time_before_1
-            spinner.info(f"Took {_td_1} second(s) to load translated sentences.")
+            spinner.info(f"Took {_td_1} second(s) to load {len(_translated):n} translated sentence(s).")
             spinner.start()
 
             # Filter translated data from all data to get untranslated data
@@ -141,16 +141,16 @@ def main():
                 untranslated_dataset = dataset.filter(lambda example: example not in _translated)
             time_after_2 = time.perf_counter()
             _td_2 = time_after_2 - time_before_2
-            spinner.info(f"Took {_td_2} second(s) to compute untranslated sentences.")
+            _ut_ds = untranslated_dataset.dataset_size
+            spinner.info(f"Took {_td_2} second(s) to compute {_ut_ds:n} untranslated sentence(s).")
             spinner.start()
 
-            _ut_ds = untranslated_dataset.dataset_size
             
             # Translate untranslated data
             time_before_3 = time.perf_counter()
             spinner.info("Translating untranslated sentences...")
             spinner.start()
-            spinner.text = f"[0/{_ut_ds} (0%) | 0 sentences / second"
+            spinner.text = f"[0/{_ut_ds:n} (0%) | 0 sentences / second"
             _i = 0
             for batch in untranslated_dataset.iter(batch_size):
                 _batch_text =  batch['text']
@@ -159,7 +159,7 @@ def main():
                 time_meanwhile = time.perf_counter()
                 _td = time_meanwhile - time_before
                 _i += batch_size
-                spinner.text = f"[{_i}/{_ut_ds} ({_i/_ut_ds:.2%}) | ~{_i/_td:.2f} sentences / second]"
+                spinner.text = f"[{_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_i/_td:.2f} sentences / second]"
             time_after_3 = time.perf_counter()
             _td_3 = time_after_3 - time_before_3
             spinner.text = ""
