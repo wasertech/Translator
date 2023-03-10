@@ -87,6 +87,8 @@ def main():
         output_path = args.save
         batch_size = args.batch_size
         
+        cache = f"{output_path.replace('.txt', f'.{_from}.{_to}.tmp.cache')}"
+
         try:
             # Load Data
             spinner.start()
@@ -97,12 +99,12 @@ def main():
             spinner.info("Loading all sentences...")
             spinner.text = ""
             spinner.start()
-            txt_files = utils.glob_files_from_dir(source_path, suffix=".txt")
+            txt_files = list(set(utils.glob_files_from_dir(source_path, suffix=".txt")) - set([output_path, f"{source_path}/{output_path}"]) - set(utils.glob_files_from_dir(cache, suffix="*")))
             _l = len(txt_files)
             spinner.info(f"Found {_l} text file{'s' if _l > 1 else ''}.")
             spinner.stop()
             mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-            dataset = load_dataset('text', data_files={'translate': txt_files}, streaming=False, split="translate", cache_dir=f"{output_path.replace('.txt', f'{_from}.{_to}.tmp.cache')}")
+            dataset = load_dataset('text', data_files={'translate': txt_files}, streaming=False, split="translate", cache_dir=cache)
             mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
             spinner.info(f"RAM memory used by dataset: {(mem_after - mem_before)} MB")
             _ds = dataset.dataset_size
@@ -114,7 +116,7 @@ def main():
             spinner.info("Loading translated sentences...")
             spinner.stop()
             if Path(output_path).exists() and Path(output_path).is_file():
-                translated_dataset = load_dataset('text', data_files={'translated': [output_path]}, streaming=False, split="translated", cache_dir=f"{output_path.replace('.txt', f'{_from}.{_to}.tmp.cache')}")
+                translated_dataset = load_dataset('text', data_files={'translated': [output_path]}, streaming=False, split="translated", cache_dir=cache)
                 translations = translated_dataset['text']
                 spinner.info(f"Translated {len(translations)} sentences already.")
                 spinner.start()
@@ -166,6 +168,8 @@ def main():
             spinner.info(f"All files in {args.directory} have been translated from {args.source} to {args.target}.")
             spinner.info(f"Took {_td:.1f} second(s) to translate over {_ut_ds >> 30} GB (~ {float(_ut_ds >> 27)/_td:.1f} Gb/s).")
             
+            if Path(cache).exists(): os.rmdir(cache)
+
         except UserWarning:
             pass
         except KeyboardInterrupt as e:
