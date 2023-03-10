@@ -28,6 +28,7 @@ def parse_arguments():
     argument_parse.add_argument('-m', '--model_id', default="facebook/nllb-200-distilled-600M", help="HuggingFace model ID to use.")
     argument_parse.add_argument('-p', '--pipeline', default="translation", help="Pipeline task to use.")
     argument_parse.add_argument('-b', '--batch_size', default=128, type=int, help="Number of sentences to batch for translation.")
+    argument_parse.add_argument('-n', '--nproc', default=4, type=int, help="Number of process to spawn for filtering untraslated sentences.")
     argument_parse.add_argument('-L', '--language_list', action='store_true', help="Show list of languages.")
     
 
@@ -87,6 +88,7 @@ def main():
         source_path = args.directory
         output_path = args.save
         batch_size = args.batch_size
+        n_proc = args.nproc
         
         cache = f"{output_path.replace('.txt', f'.{_from}.{_to}.tmp.cache')}"
         translated_input_path = f"{cache}/{output_path}.{_from}.txt"
@@ -132,41 +134,43 @@ def main():
 
             # Filter translated data from all data to get untranslated data
             time_before_2 = time.perf_counter()
-            spinner.info("Loading translated sentences...")
+            spinner.info("Loading untranslated sentences...")
             spinner.stop()
             if not _translated:
                 untranslated_dataset = dataset
             else:
                 spinner.info("Filtering untranslated sentences...")
-                untranslated_dataset = dataset.filter(lambda example: example not in _translated)
+                untranslated_dataset = dataset.filter(lambda x: x['text'] not in _translated, num_proc=n_proc)
             time_after_2 = time.perf_counter()
             _td_2 = time_after_2 - time_before_2
             _ut_ds = untranslated_dataset.dataset_size
             spinner.info(f"Took {_td_2} second(s) to compute {_ut_ds:n} untranslated sentence(s).")
             spinner.start()
-
             
             # Translate untranslated data
             time_before_3 = time.perf_counter()
             spinner.info("Translating untranslated sentences...")
             spinner.start()
-            spinner.text = f"[0/{_ut_ds:n} (0%) | 0 sentences / second"
-            _i = 0
+            spinner.text = f"[0/{_ut_ds:n} (0%) | 0 sentences / second]"
+            _i, _t = 0, 0
+            
             for batch in untranslated_dataset.iter(batch_size):
+                _t = time.perf_counter()
                 _batch_text =  batch['text']
                 _translated += _batch_text
                 translations += translate_sentence(_batch_text, translator)
                 time_meanwhile = time.perf_counter()
-                _td = time_meanwhile - time_before
+                _td = time_meanwhile - _t
                 _i += batch_size
                 spinner.text = f"[{_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_i/_td:.2f} sentences / second]"
+            
             time_after_3 = time.perf_counter()
             _td_3 = time_after_3 - time_before_3
             spinner.text = ""
             spinner.info("Translation completed.")
-            spinner.info(f"Took {_td_3} second(s) to translate untranslated sentences.")
+            spinner.info(f"Took {_td_3:.1f} second(s) to translate {_ut_ds:n} sentences.")
 
-            # Report translation            
+            # Report translation
             time_after = time.perf_counter()
             _td = time_after - time_before
             spinner.info(f"All files in {args.directory} have been translated from {args.source} to {args.target}.")
