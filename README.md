@@ -2,7 +2,7 @@
 *`Translate`* *`from` one language* *`to` another*, *any `sentence` you would like*.
 
 ```zsh
-# Translate [FROM] [TO] [SENTENCE]
+# Translate [FROM] [TO] [SENTENCES]
 ❯ translate fra_Latn eng_Latn "Traduisez quelle que soit la phrase que vous voulez."
 Translate whatever sentence you want.
 ```
@@ -25,14 +25,14 @@ Using `translate` from your favorite shell.
 
 ```zsh
 ❯ translate --help
-usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-L] _from _to [sentence ...]
+usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-L] [_from] [_to] [sentences ...]
 
 Translate [FROM one language] [TO another], [any SENTENCE you would like].
 
 positional arguments:
   _from                 Source language to translate from.
   _to                   Target language to translate towards.
-  sentence              Something to translate.
+  sentences             Sentences to translate.
 
 options:
   -h, --help            show this help message and exit
@@ -46,6 +46,8 @@ options:
                         HuggingFace model ID to use.
   -p PIPELINE, --pipeline PIPELINE
                         Pipeline task to use.
+  -b BATCH_SIZE, --batch_size BATCH_SIZE
+                        Number of sentences to batch for translation.
   -L, --language_list   Show list of languages.
 ```
 
@@ -64,23 +66,7 @@ Esto es español.
 You can also easily `translate` files from a `--directory` and `--save` to a file.
 
 ```zsh
-# Loading sentences from text files in --directory (-d)
-# and --save (-S) the translated sentences in a text file
 ❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn & bg
-# during the translation process
-# two buffer files are created
-❯ ls ./*.eng_Latn.tmp.txt
-❯ ls ./*.fra_Latn.tmp.txt
-# This allows for interuptions in the process...
-❯ fg
-# At the end of the process,
-# only when all sentences have been translated, result is saved:
-# -   under each respective file
-❯ ls ./*.fra_Latn.txt
-# -   under --save (-S) if given
-❯ cat en2fr.txt | head
-# Buffers are also removed
-❯ ls *.tmp.txt
 ```
 
 Using `Translator` with `python`.
