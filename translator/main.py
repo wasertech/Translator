@@ -100,7 +100,7 @@ def main():
             txt_files = utils.glob_files_from_dir(source_path, suffix=".txt")
             _l = len(txt_files)
             spinner.info(f"Found {_l} text file{'s' if _l > 1 else ''}.")
-            spinner.start()
+            spinner.stop()
             mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
             dataset = load_dataset('text', data_files={'translate': txt_files}, streaming=False, split="translate", cache_dir=f"{output_path.replace('.txt', f'{_from}.{_to}.tmp.cache')}")
             mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
@@ -112,7 +112,7 @@ def main():
             # Load already translated data if any
             time_before_1 = time.perf_counter()
             spinner.info("Loading translated sentences...")
-            spinner.start()
+            spinner.stop()
             if Path(output_path).exists() and Path(output_path).is_file():
                 translated_dataset = load_dataset('text', data_files={'translated': [output_path]}, streaming=False, split="translated", cache_dir=f"{output_path.replace('.txt', f'{_from}.{_to}.tmp.cache')}")
                 translations = translated_dataset['text']
