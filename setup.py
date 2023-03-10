@@ -22,6 +22,8 @@ setup(
         'transformers~=4.25.1',
         'langcodes~=3.3.0',
         'datasets~=2.10.1',
+        'halo~=0.0.31',
+        'psutil~=5.9.4',
     ],
     entry_points={
         'console_scripts': [
