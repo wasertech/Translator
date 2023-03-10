@@ -34,7 +34,7 @@ def translate_sentence(sentence, translator):
 def main():
     args = parse_arguments()
     
-    _from, _to = args._from[0], args._to[0]
+    _from, _to = "".join(args._from), "".join(args._to)
 
     if args.version:
         if _from == _to == "eng_Latn":
@@ -66,9 +66,10 @@ def main():
 
     translations = []
 
-    if not args.sentence and Path(args.directory).exists():
+    if Path(args.directory).exists():
         print("No sentence was given but directory was provided.")
         print(f"Translating sentences in {args._from} to {args._to} from text files in directory \'{args.directory}\'")
+        print(f"Using {translator.device} to batch translate")
         source_path = args.directory
         output_path = args.save
         print("Translating files...")
@@ -120,9 +121,8 @@ def main():
                                     translated_sentences.append(translation)
                                 _i += 1
                     
-                    if Path(_b).exists():
-                        os.remove(_b1)
-                        os.remove(_b2)
+                    if Path(_b1).exists(): os.remove(_b1)
+                    if Path(_b2).exists(): os.remove(_b2)
                 elif args.save:
                     _files.set_description(f"Translated file {_f}.")
 
