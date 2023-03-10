@@ -76,6 +76,7 @@ def main():
     translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline)
 
     translations = []
+    _translated = []
 
     spinner.text = ""
     spinner.stop()
@@ -88,6 +89,7 @@ def main():
         batch_size = args.batch_size
         
         cache = f"{output_path.replace('.txt', f'.{_from}.{_to}.tmp.cache')}"
+        translated_input_path = f"{cache}/{output_path}.{_from}.txt"
 
         try:
             # Load Data
@@ -115,10 +117,10 @@ def main():
             time_before_1 = time.perf_counter()
             spinner.info("Loading translated sentences...")
             spinner.stop()
-            if Path(output_path).exists() and Path(output_path).is_file():
-                translated_dataset = load_dataset('text', data_files={'translated': [output_path]}, streaming=False, split="translated", cache_dir=cache)
-                translations = translated_dataset['text']
-                spinner.info(f"Translated {len(translations)} sentences already.")
+            if Path(translated_input_path).exists() and Path(translated_input_path).is_file():
+                translated_dataset = load_dataset('text', data_files={'translated': [translated_input_path]}, streaming=False, split="translated", cache_dir=cache)
+                _translated = translated_dataset['text']
+                spinner.info(f"Translated {len(_translated)} sentences already.")
                 spinner.start()
             else:
                 spinner.info("Not translated any sentences yet.")
@@ -132,11 +134,11 @@ def main():
             time_before_2 = time.perf_counter()
             spinner.info("Loading translated sentences...")
             spinner.stop()
-            if not translations:
+            if not _translated:
                 untranslated_dataset = dataset
             else:
                 spinner.info("Filtering untranslated sentences...")
-                untranslated_dataset = dataset.filter(lambda example: example not in translations)
+                untranslated_dataset = dataset.filter(lambda example: example not in _translated)
             time_after_2 = time.perf_counter()
             _td_2 = time_after_2 - time_before_2
             spinner.info(f"Took {_td_2} second(s) to compute untranslated sentences.")
@@ -151,7 +153,9 @@ def main():
             spinner.text = f"[0/{_ut_ds} (0%) | 0 sentences / second"
             _i = 0
             for batch in untranslated_dataset.iter(batch_size):
-                translations += translate_sentence(batch['text'], translator)
+                _batch_text =  batch['text']
+                _translated += _batch_text
+                translations += translate_sentence(_batch_text, translator)
                 time_meanwhile = time.perf_counter()
                 _td = time_meanwhile - time_before
                 _i += batch_size
@@ -174,8 +178,9 @@ def main():
             pass
         except KeyboardInterrupt as e:
             spinner.warn("You are about to loose your progress!")
-            if args.save and translations:
-                utils.save_txt(translations, Path(args.save))                
+            if args.save and translations and _translated:
+                utils.save_txt(_translated, Path(translated_input_path))
+                utils.save_txt(translations, Path(output_path))            
                 spinner.info("Partial translation has been saved.")
             sys.exit(1)
     else:
