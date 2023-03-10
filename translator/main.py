@@ -116,6 +116,8 @@ def main():
             if Path(output_path).exists() and Path(output_path).is_file():
                 translated_dataset = load_dataset('text', data_files={'translated': [output_path]}, streaming=False, split="translated", cache_dir=f"{output_path.replace('.txt', f'{_from}.{_to}.tmp.cache')}")
                 translations = translated_dataset['text']
+                spinner.info(f"Translated {len(translations)} sentences already.")
+                spinner.start()
             else:
                 spinner.info("Not translated any sentences yet.")
                 spinner.start()
