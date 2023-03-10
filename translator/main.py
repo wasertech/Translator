@@ -6,7 +6,7 @@ from multiprocessing import Queue, Process
 from threading import Thread
 from pathlib import Path
 from argparse import ArgumentParser
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from halo import Halo
 from translator import Translator, LANGS, utils, __version__
 
@@ -105,12 +105,15 @@ def main():
             spinner.start()
             txt_files = list(set(utils.glob_files_from_dir(source_path, suffix=".txt")) - set([output_path, f"{source_path}/{output_path}"]) - set(utils.glob_files_from_dir(cache, suffix="*")))
             _l = len(txt_files)
+            if _l == 0:
+                spinner.info("No files to translate.")
+                sys.exit(1)
             spinner.info(f"Found {_l} text file{'s' if _l > 1 else ''}.")
             spinner.stop()
             mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
             dataset = load_dataset('text', data_files={'translate': txt_files}, streaming=False, split="translate", cache_dir=cache)
             mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-            spinner.info(f"RAM memory used by dataset: {(mem_after - mem_before)} MB")
+            spinner.info(f"RAM memory used by dataset: {(mem_after - mem_before):n} MB")
             _ds = dataset.dataset_size
             spinner.info(f"Translating {_ds:n} sentences...")
             spinner.start()
@@ -134,16 +137,18 @@ def main():
 
             # Filter translated data from all data to get untranslated data
             time_before_2 = time.perf_counter()
-            spinner.info("Loading untranslated sentences...")
             spinner.stop()
             if not _translated:
                 untranslated_dataset = dataset
             else:
                 spinner.info("Filtering untranslated sentences...")
-                untranslated_dataset = dataset.filter(lambda x: x['text'] not in _translated, num_proc=n_proc)
+                #spinner.start()
+                #spinner.text = "Please wait..."
+                untranslated_dataset = dataset.filter(lambda x: {'text': x['text'] if x['text'] not in _translated else ""}, num_proc=n_proc, batched=True)
+                spinner.text = ""
             time_after_2 = time.perf_counter()
             _td_2 = time_after_2 - time_before_2
-            _ut_ds = untranslated_dataset.dataset_size
+            _ut_ds = _ds - len(_translated)
             spinner.info(f"Took {_td_2} second(s) to compute {_ut_ds:n} untranslated sentence(s).")
             spinner.start()
             
