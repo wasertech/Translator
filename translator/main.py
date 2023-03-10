@@ -1,5 +1,6 @@
 import os, sys
 
+from langcodes import closest_supported_match
 from multiprocessing import Queue, Process
 from threading import Thread
 from pathlib import Path
@@ -8,12 +9,16 @@ from translator import Translator, LANGS, utils, __version__
 
 from tqdm import tqdm
 
+def get_sys_lang_format():
+    i18n = os.environ.get('LANG', "en_EN.UTF-8").split(".")[0]
+    return closest_supported_match(i18n, LANGS)
+
 def parse_arguments():
     argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another], [any SENTENCE you would like].")
     argument_parse.add_argument('-v', '--version', action='store_true', help="shows the current version of translator")
-    argument_parse.add_argument('_from', nargs=1, help="Source language to translate from.")
-    argument_parse.add_argument('_to', nargs=1, help="Target language to translate towards.")
-    argument_parse.add_argument('sentence', nargs="*", help="Something to translate.")
+    argument_parse.add_argument('_from', nargs='?', default=["eng_Latn"], help="Source language to translate from.")
+    argument_parse.add_argument('_to', nargs='?', default=[get_sys_lang_format()], help="Target language to translate towards.")
+    argument_parse.add_argument('sentence', nargs="*", default=["Translator version:"], help="Something to translate.")
     argument_parse.add_argument('-d', '--directory', type=str, help="Path to directory to translate in batch instead of unique sentence.")
     argument_parse.add_argument('-S', '--save', type=str, help="Path to text file to save translations.")
     argument_parse.add_argument('-l', '--max_length', default=500, help="Max length of output.")
@@ -29,8 +34,15 @@ def translate_sentence(sentence, translator):
 def main():
     args = parse_arguments()
     
+    _from, _to = args._from[0], args._to[0]
+
     if args.version:
-        print(f"Translator version {__version__}")
+        if _from == _to == "eng_Latn":
+            print(f"Translator version: {__version__}")
+        else:
+            translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline)
+            version = translator.translate(args.sentence)
+            print(version, " ", __version__)
         sys.exit(0)
     
     if args.language_list:
@@ -42,8 +54,6 @@ def main():
 
     print("Preparing to translate...")
     print("Please be patient.")
-
-    _from, _to = args._from[0], args._to[0]
 
     for _lang in [_from, _to]:
         if _lang not in LANGS and args.model_id == "facebook/nllb-200-distilled-600M":

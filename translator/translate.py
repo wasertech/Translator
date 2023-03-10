@@ -14,7 +14,7 @@ class Translator:
         logger.debug(f"{self.target}")
         self.model_id = model_id
         logger.debug(f"{self.model_id}")
-        self.device = "gpu" if torch.cuda.is_available() else "cpu"
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         logger.debug(f"{self.device}")
         logger.debug("Loading model...")
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
