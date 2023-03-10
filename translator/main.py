@@ -33,7 +33,17 @@ def translate_sentence(sentence, translator):
 
 def main():
     args = parse_arguments()
-    
+        
+    if args.language_list:
+        print("Language list:")
+        for l in LANGS:
+            print(f"- {l}")
+        print()
+        sys.exit(0)
+
+    print("Preparing to translate...")
+    print("Please be patient.")
+
     _from, _to = "".join(args._from), "".join(args._to)
 
     if args.version:
@@ -44,16 +54,6 @@ def main():
             version = translator.translate(args.sentence)
             print(version, " ", __version__)
         sys.exit(0)
-    
-    if args.language_list:
-        print("Language list:")
-        for l in LANGS:
-            print(f"- {l}")
-        print()
-        sys.exit(0)
-
-    print("Preparing to translate...")
-    print("Please be patient.")
 
     for _lang in [_from, _to]:
         if _lang not in LANGS and args.model_id == "facebook/nllb-200-distilled-600M":
@@ -112,9 +112,9 @@ def main():
                                     _i = 0
 
                                 # Translate sentence
-                                _lines.set_description(f"Translating \"{sentence}\"...")
+                                _lines.set_description(f"Translating \"{sentence[:min(len(sentence), 10)]}...\"...")
                                 translation = translate_sentence(sentence, translator)
-                                _lines.set_description(f"Translated as \"{translation}\".")
+                                #_lines.set_description(f"Translated as \"{translation}\".")
                                 
                                 # Save translation if not already
                                 if translation not in translated_sentences:
