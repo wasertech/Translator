@@ -1,20 +1,16 @@
 import os, sys, psutil, time
 import locale
 
-from langcodes import closest_supported_match
 from multiprocessing import Queue, Process
 from threading import Thread
 from pathlib import Path
 from argparse import ArgumentParser
 from datasets import load_dataset, Dataset
 from halo import Halo
-from translator import Translator, LANGS, utils, __version__
+from translator import Translator, utils, __version__
+from translator.languages import get_nllb_lang, get_sys_lang_format
 
 locale.setlocale(locale.LC_ALL, '')
-
-def get_sys_lang_format():
-    i18n = os.environ.get('LANG', "en_EN.UTF-8").split(".")[0]
-    return closest_supported_match(i18n, LANGS)
 
 def parse_arguments():
     argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another], [any SENTENCE you would like].")
@@ -44,7 +40,7 @@ def main():
 
     if args.language_list:
         print("Language list:")
-        for l in LANGS:
+        for l in get_nllb_lang():
             print(f"- {l}")
         print()
         sys.exit(0)
@@ -63,11 +59,13 @@ def main():
         sys.exit(0)
 
     for _lang in [_from, _to]:
-        if _lang not in LANGS and args.model_id == "facebook/nllb-200-distilled-600M":
+        if _lang not in get_nllb_lang() and args.model_id == "facebook/nllb-200-distilled-600M":
             print(f"Warning! {_lang=} is not in listed as supported by the current model.")
             print("There is a high probability translation operations will fail.")
             print("Type translate --language_list to get the full list of supported languages.")
             print("Or type translate --help to get help.")
+            _nllb_lang = get_nllb_lang(_lang)
+            print(f"Using {_nllb_lang} instead of {_lang}.")
 
 
     spinner.info("Preparing to translate...")

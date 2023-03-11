@@ -25,7 +25,8 @@ Using `translate` from your favorite shell.
 
 ```zsh
 ❯ translate --help
-usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-L] [_from] [_to] [sentences ...]
+usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-L]
+                 [_from] [_to] [sentences ...]
 
 Translate [FROM one language] [TO another], [any SENTENCE you would like].
 
@@ -48,6 +49,8 @@ options:
                         Pipeline task to use.
   -b BATCH_SIZE, --batch_size BATCH_SIZE
                         Number of sentences to batch for translation.
+  -n NPROC, --nproc NPROC
+                        Number of process to spawn for filtering untraslated sentences.
   -L, --language_list   Show list of languages.
 ```
 
@@ -76,7 +79,11 @@ from translator import Translator
 
 translator = Translator("eng_Latn", "fra_Latn")
 
-english_sentence = "This is just a simple phrase."
+english_sentence = "This is just a simple phrase." or [
+    "Those are multiples sentences.",
+    "If you have lots of them, load them directly from file",
+    "To efficeienty batch translate them."
+  ]
 french_sentence = translator.translate(english_sentence)
 
 print(f"{english_sentence=}")
