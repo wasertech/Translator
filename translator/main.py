@@ -167,7 +167,7 @@ def main():
                 time_meanwhile = time.perf_counter()
                 _td = time_meanwhile - _t
                 _i += batch_size
-                spinner.text = f"[{_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_i/_td:.2f} sentences / second]"
+                spinner.text = f"[{_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{batch_size/_td:.2f} sentences / second]"
             
             time_after_3 = time.perf_counter()
             _td_3 = time_after_3 - time_before_3
