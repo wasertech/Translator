@@ -176,7 +176,7 @@ def main():
             # Report translation
             time_after = time.perf_counter()
             _td = time_after - time_before
-            spinner.info(f"All files in {args.directory} have been translated from {args.source} to {args.target}.")
+            spinner.info(f"All files in {args.directory} have been translated from {_from} to {_to}.")
             spinner.info(f"Took {_td:.1f} second(s) to translate over {_ut_ds >> 30} GB (~ {float(_ut_ds >> 27)/_td:.1f} Gb/s).")
             
             if Path(cache).exists(): os.rmdir(cache)
