@@ -116,7 +116,7 @@ From `python`:
 'fra_Latn'
 ```
 
-Checkout [`LANGS`](translator/__init__.py) to see the full list of supported languages.
+Checkout [`LANGS`](translator/language.py) to see the full list of supported languages.
 
 ## License
 
