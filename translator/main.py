@@ -91,7 +91,7 @@ def main():
         n_proc = args.nproc
         
         cache = f"{output_path.replace('.txt', f'.{_from}.{_to}.tmp.cache')}"
-        translated_input_path = f"{cache}/{output_path}.{_from}.txt"
+        translated_input_path = f"{cache}/{os.path.basename(output_path)}.{_from}.txt"
 
         try:
             # Load Data
@@ -188,7 +188,10 @@ def main():
         except KeyboardInterrupt as e:
             spinner.warn("You are about to loose your progress!")
             if args.save and translations and _translated:
-                utils.save_txt(_translated, Path(translated_input_path))
+                with Path(translated_input_path) as p:
+                    if not p.parent.exists():
+                        p.parent.mkdir(parents=True, exist_ok=True)
+                    utils.save_txt(_translated, p)
                 utils.save_txt(translations, Path(output_path))            
                 spinner.info("Partial translation has been saved.")
             sys.exit(1)
