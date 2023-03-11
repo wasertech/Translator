@@ -103,11 +103,17 @@ Language list:
 
 From `python`:
 ```python
-import translator
+>>> import translator
 >>> len(translator.LANGS)
 202
 >>> translator.LANGS
 ['ace_Arab', '...', 'zul_Latn']
+>>> from translator.language import get_nllb_lang, get_sys_lang_format
+>>> nllb_lang = get_nllb_lang("en")
+>>> nllb_lang
+'eng_Latn'
+>>> get_sys_lang_format()
+'fra_Latn'
 ```
 
 Checkout [`LANGS`](translator/__init__.py) to see the full list of supported languages.

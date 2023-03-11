@@ -27,7 +27,7 @@ def get_nllb_lang(lang = None):
     if not lang:
         return _LANGS
     else:
-        closest_supported_match(lang, _LANGS)
+        return closest_supported_match(lang, _LANGS)
 
 def get_sys_lang_format():
     i18n = os.environ.get('LANG', "en_EN.UTF-8").split(".")[0]
