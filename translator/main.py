@@ -1,6 +1,7 @@
 import os, sys, psutil, time
 import locale
 import datetime
+import shutil
 
 from multiprocessing import Queue, Process
 from threading import Thread
@@ -183,9 +184,13 @@ def main():
             time_after = time.perf_counter()
             _td = time_after - time_before
             spinner.info(f"All files in {args.directory} have been translated from {_from} to {_to}.")
-            spinner.info(f"Took {_td:.1f} second(s) to translate over {_ut_ds >> 30} GB (~ {float(_ut_ds >> 27)/_td:.1f} Gb/s).")
-            
-            if Path(cache).exists(): os.rmdir(cache)
+            _sgb = _ut_ds >> 30
+            if _sgb > 0:
+                spinner.info(f"Took {_td:.1f} second(s) to translate over {_sgb} GB (~ {float(_ut_ds >> 27)/_td:.1f} Gb/s).")
+            else:
+                spinner.info(f"Took {_td:.1f} second(s) to translate less than 1 GB.")
+
+            if Path(cache).exists(): shutil.rmtree(cache)
 
         except UserWarning:
             pass
