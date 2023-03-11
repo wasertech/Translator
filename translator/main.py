@@ -8,7 +8,7 @@ from argparse import ArgumentParser
 from datasets import load_dataset, Dataset
 from halo import Halo
 from translator import Translator, utils, __version__
-from translator.languages import get_nllb_lang, get_sys_lang_format
+from translator.language import get_nllb_lang, get_sys_lang_format
 
 locale.setlocale(locale.LC_ALL, '')
 
