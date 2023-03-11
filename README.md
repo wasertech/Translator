@@ -66,7 +66,7 @@ Esto es español.
 You can also easily `translate` files from a `--directory` and `--save` to a file.
 
 ```zsh
-❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn & bg
+❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn 
 ```
 
 Using `Translator` with `python`.
