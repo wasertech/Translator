@@ -1,5 +1,6 @@
 import os, sys, psutil, time
 import locale
+import datetime
 
 from multiprocessing import Queue, Process
 from threading import Thread
@@ -154,7 +155,7 @@ def main():
             time_before_3 = time.perf_counter()
             spinner.info("Translating untranslated sentences...")
             spinner.start()
-            spinner.text = f"[0/{_ut_ds:n} (0%) | 0 sentences / second]"
+            spinner.text = f"Processing first batch of {batch_size} sentences ({_ut_ds:n} total)... please wait for statistics."
             _i, _t = 0, 0
             
             for batch in untranslated_dataset.iter(batch_size):
@@ -165,7 +166,9 @@ def main():
                 time_meanwhile = time.perf_counter()
                 _td = time_meanwhile - _t
                 _i += batch_size
-                spinner.text = f"[{_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{batch_size/_td:.2f} sentences / second]"
+                _avg = batch_size/_td
+                _eta = (_ut_ds - _i) / _avg
+                spinner.text = f"[{_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_avg:.2f} sentences / second | ETA : {datetime.timedelta(seconds=_eta)}]"
             
             time_after_3 = time.perf_counter()
             _td_3 = time_after_3 - time_before_3
