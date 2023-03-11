@@ -165,8 +165,11 @@ def main():
                 translations += translate_sentence(_batch_text, translator)
                 time_meanwhile = time.perf_counter()
                 _td = time_meanwhile - _t
+                _td2 = time_meanwhile - time_before_3
                 _i += batch_size
-                _avg = batch_size/_td
+                _avg1 = batch_size/_td
+                _avg2 = _i/_td2
+                _avg = (_avg1 + _avg2)/2
                 _eta = (_ut_ds - _i) / _avg
                 spinner.text = f"[{_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_avg:.2f} sentences / second | ETA : {datetime.timedelta(seconds=_eta)}]"
             
