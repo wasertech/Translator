@@ -76,7 +76,7 @@ def main():
             spinner.fail(f"Missing sentences to translate.")
             sys.exit(1)
     
-    if not _to:
+    if not _to and _from:
         if not args.directory:
             spinner.fail(f"Missing \'_to\' argument.")
             print("Please choose a target language or at least give a sentence or a directory to translate.")
