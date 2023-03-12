@@ -25,7 +25,7 @@ Using `translate` from your favorite shell.
 
 ```zsh
 ❯ translate --help
-usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-L]
+usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-e NEPOCH] [-L]
                  [_from] [_to] [sentences ...]
 
 Translate [FROM one language] [TO another], [any SENTENCE you would like].
@@ -51,6 +51,8 @@ options:
                         Number of sentences to batch for translation.
   -n NPROC, --nproc NPROC
                         Number of process to spawn for filtering untraslated sentences.
+  -e NEPOCH, --nepoch NEPOCH
+                        Number of epoch(s) to translate batched sentences.
   -L, --language_list   Show list of languages.
 ```
 
@@ -69,8 +71,12 @@ Esto es español.
 You can also easily `translate` files from a `--directory` and `--save` to a file.
 
 ```zsh
-❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn 
+❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn -n 24 -b 256 -e 10000
 ```
+
+Keep `--nepoch (-e)` as small as possible but as big as necessary.
+Set `--batch_size (-b)` as big as possible but as small as necessary.
+Set `--nproc (-n)` to equal your amount of virtual threads on CPU for maximum performance.
 
 Using `Translator` with `python`.
 
