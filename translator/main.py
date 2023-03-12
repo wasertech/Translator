@@ -17,9 +17,9 @@ locale.setlocale(locale.LC_ALL, '')
 def parse_arguments():
     argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another], [any SENTENCE you would like].")
     argument_parse.add_argument('-v', '--version', action='store_true', help="shows the current version of translator")
-    argument_parse.add_argument('_from', nargs='?', default=["eng_Latn"], help="Source language to translate from.")
-    argument_parse.add_argument('_to', nargs='?', default=[get_sys_lang_format()], help="Target language to translate towards.")
-    argument_parse.add_argument('sentences', nargs="*", default=["Translator version:"], help="Sentences to translate.")
+    argument_parse.add_argument('_from', nargs='?', default=[], help="Source language to translate from.")
+    argument_parse.add_argument('_to', nargs='?', default=[], help="Target language to translate towards.")
+    argument_parse.add_argument('sentences', nargs="*", default=[], help="Sentences to translate.")
     argument_parse.add_argument('-d', '--directory', type=str, help="Path to directory to translate in batch instead of unique sentence.")
     argument_parse.add_argument('-S', '--save', type=str, help="Path to text file to save translations.")
     argument_parse.add_argument('-l', '--max_length', default=500, help="Max length of output.")
@@ -40,35 +40,100 @@ def main():
 
     spinner = Halo(spinner="dots12")
 
+    if args.version:
+        _version = "Translator version:"
+        _lang = "eng_Latn"
+
+        _to = args._to or get_sys_lang_format()
+
+        if _to == _lang:
+            spinner.info(f"{_version} {__version__}")
+        else:
+            spinner.start()
+            translator = Translator(_lang, _to, args.max_length, args.model_id, args.pipeline)
+            version = translate_sentence(_version, translator)
+            spinner.stop()
+            spinner.info(f"{version[0]} {__version__}")
+        sys.exit(0)
+
     if args.language_list:
-        print("Language list:")
-        for l in get_nllb_lang():
-            print(f"- {l}")
+        spinner.info("Language list:")
+        if args.model_id == "facebook/nllb-200-distilled-600M":
+            for l in get_nllb_lang(): print(f"- {l}")
+        else:
+            raise NotImplementedError(f"{model_id=} language list not implemented.")
         print()
         sys.exit(0)
 
-    _from, _to = "".join(args._from), "".join(args._to)
+    _from, _to, _sentences = "".join(args._from), "".join(args._to), args.sentences
 
-    if args.version:
-        if _from == _to == "eng_Latn":
-            print(f"Translator version: {__version__}")
+    if _from and _to and not _sentences:
+        if _to not in get_nllb_lang() and _to == get_nllb_lang(_to):
+            _sentences = [args._to]
+            _to = get_sys_lang_format()
+            spinner.info(f"Target language was not provided. Translating to \'{_to}\'.")
+        elif not args.directory:
+            spinner.fail(f"Missing sentences to translate.")
+            sys.exit(1)
+    
+    if not _to:
+        if not args.directory:
+            spinner.fail(f"Missing \'_to\' argument.")
+            print("Please choose a target language or at least give a sentence or a directory to translate.")
+            print("Type \'translate --help\' to get help.")
+            sys.exit(1)
         else:
-            spinner.start()
-            translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline)
-            version = translate_sentence(args.sentence, translator)
-            spinner.stop()
-            print(version[0], " ", __version__)
-        sys.exit(0)
+            _to = get_sys_lang_format()
+            spinner.info(f"Target language was not provided. Translating to \'{_to}\'.")
+    
+    if not _from:
+        spinner.fail(f"Missing \'_from\' argument.")
+        print("Please provide at least a source language.")
+        sys.exit(1)
 
     for _lang in [_from, _to]:
         if _lang not in get_nllb_lang() and args.model_id == "facebook/nllb-200-distilled-600M":
-            print(f"Warning! {_lang=} is not in listed as supported by the current model.")
-            print("There is a high probability translation operations will fail.")
+            spinner.warn(f"Warning! {_lang} is not listed as supported language by the current model {args.model_id}.")
+            print("There is a high probability translation will fail.")
             print("Type translate --language_list to get the full list of supported languages.")
-            print("Or type translate --help to get help.")
+            print("Or type \'translate --help\' to get help.")
             _nllb_lang = get_nllb_lang(_lang)
-            print(f"Using {_nllb_lang} instead of {_lang}.")
-
+            if _lang == _from:
+                _from = _nllb_lang
+            elif _lang == _to:
+                _to = _nllb_lang
+            spinner.info(f"Using {_nllb_lang} instead of {_lang}.")
+    
+    if _from == _to:
+        spinner.warn(f"Warning! {_from=} == {_to=} ")
+        print("Translating to the same language is computationally wasteful for no valid reason.")
+        spinner.info("Using Hitchens's razor to shortcut translation.")
+        if not args.directory:
+            if not args.save:
+                for sentence in _sentences: print(sentence)
+            else:
+                if not Path(args.save).exists():
+                    utils.save_txt(_sentences, Path(args.save))
+                else:
+                    print(f"{args.save} exists already.")
+                    print("Please mind the following fact:")
+                    print("Translated sentences will be added at the end of the file.")
+                    utils.save_txt(_sentences, Path(args.save), append=True)
+        else:
+            txt_files = list(set(utils.glob_files_from_dir(args.directory, suffix=".txt")) - set([args.save, f"{args.directory}/{args.save}"]) - set(utils.glob_files_from_dir(f"{args.save.replace('.txt', f'.{_from}.{_to}.tmp.cache')}", suffix="*")))
+            if not txt_files:
+                spinner.fail(f"No files to translate in \'{args.directory}\'.")
+                sys.exit(1)
+            if args.save:
+                with open(args.save, 'w') as outfile:
+                    for fname in txt_files:
+                        with open(fname) as infile:
+                            for line in infile:
+                                outfile.write(line)
+            else:
+                for fname in txt_files:
+                    with open(fname) as infile: print(infile.read())
+        sys.exit(0)
 
     spinner.info("Preparing to translate...")
     spinner.start()
@@ -106,7 +171,7 @@ def main():
             txt_files = list(set(utils.glob_files_from_dir(source_path, suffix=".txt")) - set([output_path, f"{source_path}/{output_path}"]) - set(utils.glob_files_from_dir(cache, suffix="*")))
             _l = len(txt_files)
             if _l == 0:
-                spinner.info("No files to translate.")
+                spinner.fail(f"No files to translate in \'{source_path}\'.")
                 sys.exit(1)
             spinner.info(f"Found {_l} text file{'s' if _l > 1 else ''}.")
             spinner.stop()
@@ -177,13 +242,13 @@ def main():
             time_after_3 = time.perf_counter()
             _td_3 = time_after_3 - time_before_3
             spinner.text = ""
-            spinner.info("Translation completed.")
+            spinner.succeed("Translation completed.")
             spinner.info(f"Took {_td_3:.1f} second(s) to translate {_ut_ds:n} sentences.")
 
             # Report translation
             time_after = time.perf_counter()
             _td = time_after - time_before
-            spinner.info(f"All files in {args.directory} have been translated from {_from} to {_to}.")
+            spinner.succeed(f"All files in {args.directory} have been translated from {_from} to {_to}.")
             _sgb = _ut_ds >> 30
             if _sgb > 0:
                 spinner.info(f"Took {_td:.1f} second(s) to translate over {_sgb} GB (~ {float(_ut_ds >> 27)/_td:.1f} Gb/s).")
@@ -202,10 +267,10 @@ def main():
                         p.parent.mkdir(parents=True, exist_ok=True)
                     utils.save_txt(_translated, p)
                 utils.save_txt(translations, Path(output_path))            
-                spinner.info("Partial translation has been saved.")
+                spinner.succeed(f"Partial translation has been saved under {output_path}.")
             sys.exit(1)
     else:
-        translation = translate_sentence(args.sentences, translator)
+        translation = translate_sentence(_sentences, translator)
         for t in translation: print(t)
         translations.append(translation)
     
@@ -213,14 +278,16 @@ def main():
         if not Path(args.save).exists():
             utils.save_txt(translations, Path(args.save))
         else:
-            print(f"{args.save} exists already.")
-            print("Please mind the following fact:")
-            print("Translated sentences will be added at the end of the file.")
+            spinner.warn(f"{args.save} exists already.")
+            spinner.info("Translated sentences will be added at the end of the file.")
             utils.save_txt(translations, Path(args.save), append=True)
 
 if __name__ == "__main__":
     try:
         main()
         sys.exit(0)
+    except NotImplementedError as e:
+        print(str(e))
+        sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)

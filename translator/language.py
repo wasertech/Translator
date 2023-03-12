@@ -1,5 +1,6 @@
 import os
 from langcodes import closest_supported_match
+from langcodes.tag_parser import LanguageTagError
 
 _LANGS = [ 
         "ace_Arab", "ace_Latn", "acm_Arab", "acq_Arab", "aeb_Arab", "afr_Latn", "ajp_Arab", "aka_Latn", "amh_Ethi", "apc_Arab", "arb_Arab",
@@ -27,7 +28,10 @@ def get_nllb_lang(lang = None):
     if not lang:
         return _LANGS
     else:
-        return closest_supported_match(lang, _LANGS)
+        try:
+            return closest_supported_match(lang, _LANGS)
+        except LanguageTagError as lte:
+            return lang
 
 def get_sys_lang_format():
     i18n = os.environ.get('LANG', "en_EN.UTF-8").split(".")[0]
