@@ -44,7 +44,6 @@ setup(
         "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
         "Operating System :: OS Independent",
-        "Topic :: Internationalization",
         "Topic :: Text Processing",
         "Topic :: Terminals",
         "Topic :: System :: Shells",
