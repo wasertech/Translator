@@ -33,7 +33,7 @@ def parse_arguments():
     argument_parse.add_argument('-m', '--model_id', default="facebook/nllb-200-distilled-600M", help="HuggingFace model ID to use.")
     argument_parse.add_argument('-p', '--pipeline', default="translation", help="Pipeline task to use.")
     argument_parse.add_argument('-b', '--batch_size', default=128, type=int, help="Number of sentences to batch for translation.")
-    argument_parse.add_argument('-n', '--nproc', default=4, type=int, help="Number of process to spawn for filtering untraslated sentences.")
+    argument_parse.add_argument('-n', '--nproc', default=4, type=int, help="Number of process(es) to spawn for batch translation.")
     argument_parse.add_argument('-e', '--nepoch', default=1, type=int, help="Number of epoch(s) to translate batched sentences.")
     argument_parse.add_argument('-L', '--language_list', action='store_true', help="Show list of languages.")
     
