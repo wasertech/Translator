@@ -92,8 +92,7 @@ Greet Translator.
 ```
 ❯ translate
 ℹ Welcome!
-ℹ I am Translator.
-ℹ Translator version: 0.3.1b4
+ℹ I am Translator version: 0.3.1b5
 ℹ At your service.
 ? What would you like to translate? Manually typed sentences
 ℹ Translating from: Manually typed sentences
@@ -103,6 +102,7 @@ Greet Translator.
 ℹ Translating to fra_Latn.
 ℹ Preparing to translate...
 Type [Ctrl] + [C] to exit.
+          
 What would you like to translate?
 ? Translate: This is a prompt-like translation shell!
 C'est une coquille de traduction rapide !
