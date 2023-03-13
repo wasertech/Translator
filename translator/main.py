@@ -77,8 +77,8 @@ def _log(msg, logger=None, spinner=None, _type="info"):
         print(msg)
     return msg
 
-def print_version(version, _to=get_sys_lang_format(), is_interactive=False, spinner=None, logger=None, max_length=max_translation_lenght, model_id=default_translator_model, pipeline=default_translator_pipeline):
-    _version = "Translator version:"
+def print_version(version, prefix="Translator version:", _to=get_sys_lang_format(), is_interactive=False, spinner=None, logger=None, max_length=max_translation_lenght, model_id=default_translator_model, pipeline=default_translator_pipeline):
+    _version = prefix
     _lang = "eng_Latn"
     v = None
 
@@ -183,7 +183,7 @@ def main():
     if not _from and not _to and not _sentences and not _directory and is_interactive:
         _log("Welcome!", logger, spinner, 'info')
         _log("I am Translator.", logger, spinner, 'info')
-        print_version(__version__, _to="".join(args._to) or 'eng_Latn', is_interactive=is_interactive, spinner=spinner, logger=logger, max_length=args.max_length, model_id=args.model_id, pipeline=args.pipeline)
+        print_version(__version__, prefix="I am Translator version:", _to="".join(args._to) or 'eng_Latn', is_interactive=is_interactive, spinner=spinner, logger=logger, max_length=args.max_length, model_id=args.model_id, pipeline=args.pipeline)
         _log("At your service.", logger, spinner, 'info')
 
         options = ["Manually typed sentences", "Stored sentences in file(s)", "Nothing, just exit"]
@@ -243,6 +243,7 @@ def main():
                 raise exception
             
             _log("Type [Ctrl] + [C] to exit.")
+            _log(" "*10)
             try:
                 while True:
                     _log("What would you like to translate?")

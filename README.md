@@ -27,11 +27,26 @@ Uses Meta's NLLB model [`facebook/nllb-200-distilled-600M`](https://huggingface.
 
 ## Installation
 
-Use `pip` to install Translator (only from source for now).
+Use `pip` to install Translator.
 
 ```zsh
-pip install git+https://github.com/wasertech/Translator.git
-which translate
+❯ pip install interpres
+```
+
+Or from source.
+```zsh
+❯  pip install git+https://github.com/wasertech/Translator.git
+```
+
+You can also use a specific version.
+```zsh
+❯  pip install interpres==0.3.1b4
+❯  pip install git+https://github.com/wasertech/Translator.git@v0.3.1b4
+```
+
+Locate Translator.
+```zsh
+❯ which translate
 ```
 
 ## Usage
@@ -73,14 +88,55 @@ options:
 
 You can `translate` `from` one language `to` another, any `sentence` you would like.
 
-```zsh
-# Translate from English in French
-❯ translate eng_Latn fra_Latn "This is French."
-C\'est français.
+Greet Translator.
+```
+❯ translate
+ℹ Welcome!
+ℹ I am Translator.
+ℹ Translator version: 0.3.1b4
+ℹ At your service.
+? What would you like to translate? Manually typed sentences
+ℹ Translating from: Manually typed sentences
+? What language to translate from? en
+ℹ Translating from eng_Latn.
+? What language to translate to? fr
+ℹ Translating to fra_Latn.
+ℹ Preparing to translate...
+Type [Ctrl] + [C] to exit.
+What would you like to translate?
+? Translate: This is a prompt-like translation shell!
+C'est une coquille de traduction rapide !
 
-# Translate from English in Spanish
+What would you like to translate?
+? Translate: You can quickly and effortlessly translate anything from here!
+Vous pouvez traduire n'importe quoi rapidement et sans effort.
+
+What would you like to translate?
+? Translate: I hope you like my work and are considering becoming a sponsor...
+J'espère que vous aimez mon travail et que vous envisagez devenir sponsor...
+
+What would you like to translate?
+? Translate:                                                                                                                                                                                 
+
+Cancelled by user
+```
+
+Translate from English in French.
+```
+❯ translate eng_Latn fra_Latn "This is French."
+C'est français.
+
+❯ LANG="fr_CH.UTF-8" translate en "This is also French."
+C'est aussi du français.
+```
+
+Translate from English in Spanish.
+```zsh
 ❯ translate eng_Latn spa_Latn "This is Spanish."
 Esto es español.
+
+❯ translate en es "This is also Spanish."
+Esto también es español.
 ```
 
 You can also easily `translate` files from a `--directory` and `--save` to a file.
