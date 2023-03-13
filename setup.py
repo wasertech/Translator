@@ -8,7 +8,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
 
 
 setup(
-    name='translator',
+    name='interpres',
     author='Danny Waser',
     version=translator.__version__,
     license='LICENSE',
@@ -26,6 +26,7 @@ setup(
         'psutil~=5.9.4',
         'shutils~=0.1.0',
         'accelerate~=0.17.0',
+        'questionary~=1.10.0',
     ],
     entry_points={
         'console_scripts': [

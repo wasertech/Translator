@@ -1,9 +1,24 @@
-# Translator
+# Interpres (Translator)
+
+> Latin Noun
+>
+> **interpres** *m* or *f* (genitive interpretis); third declension
+>
+> 1. *An agent between two parties*; *broker*, *negotiator*, *factor*. 
+>
+>>> Synonyms: *cōciō*, *arillātor*
+>
+>
+> 2. *A translator*, *interpreter*, *expounder*, *expositor*, *explainer*; *dragoman*. 
+>
+>>> Synonyms: *coniector*, *commentātor*, *interpretātor*, *trānslātor*
+
+
 *`Translate`* *`from` one language* *`to` another*, *any `sentence` you would like*.
 
 ```zsh
 # Translate [FROM] [TO] [SENTENCES]
-❯ translate fra_Latn eng_Latn "Traduisez quelle que soit la phrase que vous voulez."
+❯ translate fr "Traduisez quelle que soit la phrase que vous voulez."
 Translate whatever sentence you want.
 ```
 
