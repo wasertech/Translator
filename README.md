@@ -74,9 +74,33 @@ You can also easily `translate` files from a `--directory` and `--save` to a fil
 ❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn -n 24 -b 256 -e 10000
 ```
 
-Keep `--nepoch (-e)` as small as possible but as big as necessary.
-Set `--batch_size (-b)` as big as possible but as small as necessary.
-Set `--nproc (-n)` to equal your amount of virtual threads on CPU for maximum performance.
+Define:
+  - `--nepoch (-e)` as small as possible but as big as necessary.
+    
+    Translator uses this number `e` of epoch to determine the rate of time between updates by the amount of sentences given for translation at once.
+
+    If this number is too small, you will face Out-Of-Memory (OOM) errors.
+    If it is too big, you will get poor efficency.
+
+    Keep it between 1 and the sum of sentences to translate.
+
+    For maximum efficency keep it as low as you can while beeing able to fit `epoch_split` number of sentences into `device`'s memory.
+
+  - `--batch_size (-b)` as big as possible but as small as necessary.
+
+    Translator uses this value every time it needs to batch sentences to work on them.
+
+    Mostly impacts the amount of sentences to batch togheter from `epoch_split` sentences to translate in one go.
+
+    Keep it as high as possible (<`epoch_split`) but as low as your `device` memory allows to (<=1).
+
+    For GPU using multiples of `2` is best for memory optimization (i.e. `2`, `4`, `8`, `16`, `32`, `64`, `128`, `256`, `512`, etc.).
+
+  - `--nproc (-n)` to equal your amount of virtual threads on CPU for maximum performance.
+
+    This value is used by translator everytime multiples sentences need to be processed by the CPU.
+
+    Keeping it at its highest possible value, garanties maximum performances during untranslated sentnces filtering and batched sentences translation. 
 
 Using `Translator` with `python`.
 
