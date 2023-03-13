@@ -501,7 +501,7 @@ def main():
                 #_avg = (_avg1 + _avg2)/2
                 _etr = (_ut_ds - _i) / _avg1
                 update = f"Epoch {i:n}/{nepoch:n} | {_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_avg1:.2f} translation(s) / second | ETR: {timedelta(seconds=_etr)} | dT: {timedelta(seconds=_td)}"
-                _log(update, logger, spinner, 'debug' if args.debug else 'info')
+                _log(update, logger, None, 'debug' if args.debug else 'info')
                 if is_interactive and spinner: spinner.text = update
             
             time_after_3 = time.perf_counter()
@@ -557,6 +557,7 @@ def main():
             NotImplementedError,
             Exception,
         ) as exception:
+            _log(str(exception), logger, spinner, 'error')
             _log("You are about to loose your progress!", logger, spinner, 'warning')
             if _save_path and translations and _translated:
                 with Path(translated_input_path) as p:
@@ -569,7 +570,8 @@ def main():
                         os.remove(_p)
                     utils.save_txt(translations, _p)         
                 _log(f"Partial translation has been saved under {output_path}.", logger, spinner, 'success')
-            raise exception
+            #raise exception
+            sys.exit(1)
     else:
         translation = translate_sentence(_sentences, translator)
         for t in translation: print(t)
