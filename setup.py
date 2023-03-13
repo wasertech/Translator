@@ -32,11 +32,10 @@ setup(
             'translate = translator.main:main',
         ]
     },
-    url='https://gitlab.com/waser-technologies/technologies/assistant',
     project_urls={
-        "Documentation": "https://gitlab.com/waser-technologies/technologies/assistant/blob/master/README.md",
-        "Code": "https://gitlab.com/waser-technologies/technologies/assistant",
-        "Issue tracker": "https://gitlab.com/waser-technologies/technologies/assistant/issues",
+        "Documentation": "https://github.com/wasertech/Translator/blob/main/README.md",
+        "Code": "https://github.com/wasertech/Translator",
+        "Issue tracker": "https://github.com/wasertech/Translator/issues",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
