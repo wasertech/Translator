@@ -1,18 +1,25 @@
 import os, sys, psutil, time
 import locale
-import datetime
 import shutil
+import torch
 
-from multiprocessing import Queue, Process
-from threading import Thread
+from multiprocess import set_start_method
+from datetime import timedelta
 from pathlib import Path
 from argparse import ArgumentParser
 from datasets import load_dataset, Dataset
 from halo import Halo
+import pyarrow as pa
+import pyarrow.compute as compute
 from translator import Translator, utils, __version__
 from translator.language import get_nllb_lang, get_sys_lang_format
 
 locale.setlocale(locale.LC_ALL, '')
+
+try:
+    set_start_method("spawn")
+except RuntimeError:
+    pass
 
 def parse_arguments():
     argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another], [any SENTENCE you would like].")
@@ -27,13 +34,14 @@ def parse_arguments():
     argument_parse.add_argument('-p', '--pipeline', default="translation", help="Pipeline task to use.")
     argument_parse.add_argument('-b', '--batch_size', default=128, type=int, help="Number of sentences to batch for translation.")
     argument_parse.add_argument('-n', '--nproc', default=4, type=int, help="Number of process to spawn for filtering untraslated sentences.")
+    argument_parse.add_argument('-e', '--nepoch', default=1, type=int, help="Number of epoch(s) to translate batched sentences.")
     argument_parse.add_argument('-L', '--language_list', action='store_true', help="Show list of languages.")
     
 
     return argument_parse.parse_args()
 
 def translate_sentence(sentence, translator):
-    return translator.translate(sentence)
+    return translator.translate(sentence) or []
 
 def main():
     args = parse_arguments()
@@ -112,13 +120,13 @@ def main():
             if not args.save:
                 for sentence in _sentences: print(sentence)
             else:
-                if not Path(args.save).exists():
-                    utils.save_txt(_sentences, Path(args.save))
-                else:
-                    print(f"{args.save} exists already.")
-                    print("Please mind the following fact:")
-                    print("Translated sentences will be added at the end of the file.")
-                    utils.save_txt(_sentences, Path(args.save), append=True)
+                # if not Path(args.save).exists():
+                utils.save_txt(_sentences, Path(args.save))
+                # else:
+                #     print(f"{args.save} exists already.")
+                #     print("Please mind the following fact:")
+                #     print("Translated sentences will be added at the end of the file.")
+                #     utils.save_txt(_sentences, Path(args.save), append=True)
         else:
             txt_files = list(set(utils.glob_files_from_dir(args.directory, suffix=".txt")) - set([args.save, f"{args.directory}/{args.save}"]) - set(utils.glob_files_from_dir(f"{args.save.replace('.txt', f'.{_from}.{_to}.tmp.cache')}", suffix="*")))
             if not txt_files:
@@ -139,7 +147,7 @@ def main():
     spinner.start()
     spinner.text = "Please be patient."
 
-    translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline)
+    translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline, batch_size=args.batch_size, n_proc=args.nproc)
 
     translations = []
     _translated = []
@@ -149,11 +157,16 @@ def main():
 
     if args.directory and Path(args.directory).exists():
         spinner.info("No sentence was given but directory was provided.")
-        spinner.info(f"Using {translator.device} to translate sentences in {args._from} to {args._to} from text files in directory \'{args.directory}\' by batches of size {args.batch_size}.")
+        spinner.info(f"Translate sentences in {args._from} to {args._to} from text files in directory \'{args.directory}\' by batches of size {args.batch_size}.")
         source_path = args.directory
+        if not args.save:
+            spinner.fail("Translating sentences from directory without passing --save argument is forbbiden.")
+            print("Please choose where to store the translation as text file.")
+            print("Type \'!! --save translations.txt\' to append the --save flag to your last command.")
+            sys.exit(1)
         output_path = args.save
         batch_size = args.batch_size
-        n_proc = args.nproc
+        n_proc, n_epoch = args.nproc, args.nepoch
         
         cache = f"{output_path.replace('.txt', f'.{_from}.{_to}.tmp.cache')}"
         translated_input_path = f"{cache}/{os.path.basename(output_path)}.{_from}.txt"
@@ -162,7 +175,10 @@ def main():
             # Load Data
             spinner.start()
             spinner.text = "Loading datasets..."
-            
+            translate_data_files = {'translate': [],}
+            translated_data_files = {'translated': [translated_input_path],}
+            translation_data_files = {'translation': [output_path],}
+
             # Load all data to translate
             time_before = time.perf_counter()
             spinner.info("Loading all sentences...")
@@ -175,11 +191,15 @@ def main():
                 sys.exit(1)
             spinner.info(f"Found {_l} text file{'s' if _l > 1 else ''}.")
             spinner.stop()
+            
+            for t in txt_files: translate_data_files['translate'].append(t)
+            
             mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-            dataset = load_dataset('text', data_files={'translate': txt_files}, streaming=False, split="translate", cache_dir=cache)
+            translate_dataset = load_dataset('text', data_files=translate_data_files, split="translate", cache_dir=cache)
             mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-            spinner.info(f"RAM memory used by dataset: {(mem_after - mem_before):n} MB")
-            _ds = dataset.dataset_size
+            spinner.info(f"RAM memory used by translate dataset: {(mem_after - mem_before):n} MB")
+            to_translate = translate_dataset.unique('text')
+            _ds = len(to_translate)
             spinner.info(f"Translating {_ds:n} sentences...")
             spinner.start()
             
@@ -187,86 +207,169 @@ def main():
             time_before_1 = time.perf_counter()
             spinner.info("Loading translated sentences...")
             spinner.stop()
-            if Path(translated_input_path).exists() and Path(translated_input_path).is_file():
-                translated_dataset = load_dataset('text', data_files={'translated': [translated_input_path]}, streaming=False, split="translated", cache_dir=cache)
-                _translated = translated_dataset['text']
-                spinner.info(f"Translated {len(_translated):n} sentences already.")
+            if Path(translated_input_path).exists() and Path(translated_input_path).is_file() and Path(output_path).exists() and Path(output_path).is_file():
+                mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                translated_dataset = load_dataset('text', data_files=translated_data_files, split="translated", cache_dir=cache)
+                mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                spinner.info(f"RAM memory used by translated dataset: {(mem_after - mem_before):n} MB")
+                been_translated = translated_dataset.unique('text')
+                _t_ds = len(been_translated)
+                _translated += been_translated
+                spinner.info(f"Translated {_t_ds:n} sentences already.")
+                
+                mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                translation_dataset = load_dataset('text', data_files=translation_data_files, split="translation", cache_dir=cache)
+                mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                spinner.info(f"RAM memory used by translation dataset: {(mem_after - mem_before):n} MB")
+                translations += translation_dataset.unique('text')
                 spinner.start()
             else:
+                _t_ds = 0
                 spinner.info("Not translated any sentences yet.")
                 spinner.start()
             time_after_1 = time.perf_counter()
             _td_1 = time_after_1 - time_before_1
-            spinner.info(f"Took {_td_1} second(s) to load {len(_translated):n} translated sentence(s).")
+            spinner.info(f"Took {timedelta(seconds=_td_1)} second(s) to load {_t_ds:n} translated sentence(s).")
             spinner.start()
 
             # Filter translated data from all data to get untranslated data
             time_before_2 = time.perf_counter()
             spinner.stop()
+            mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
             if not _translated:
-                untranslated_dataset = dataset
+                untranslated_dataset = translate_dataset
             else:
                 spinner.info("Filtering untranslated sentences...")
-                #spinner.start()
-                #spinner.text = "Please wait..."
-                untranslated_dataset = dataset.filter(lambda x: {'text': x['text'] if x['text'] not in _translated else ""}, num_proc=n_proc, batched=True)
+                # spinner.start()
+                # spinner.text = "Filtering translated sentences..."
+                # translate_table = translate_dataset.data
+                # translated_table_mask = pa.array([True if t not in _translated else False for t in to_translate])
+                # #flags = compute.is_in(table['text'], value_set=pa.array(_translated, pa.string()))
+                # filtered_table = translate_table.filter(translated_table_mask)
+                # untranslated_dataset = Dataset(filtered_table, translate_dataset.info, translate_dataset.split)
+                #untranslated_dataset = translate_dataset.filter(lambda x: [x['text'] not in _translated], num_proc=n_proc, batched=True, batch_size=batch_size)
+                untranslated = { 'text': list( set(to_translate) - set(_translated) ) }
+                untranslated_dataset = Dataset.from_dict(untranslated)
                 spinner.text = ""
+            mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+            spinner.info(f"RAM memory used by untranslated dataset: {(mem_after - mem_before):n} MB")
             time_after_2 = time.perf_counter()
             _td_2 = time_after_2 - time_before_2
-            _ut_ds = _ds - len(_translated)
-            spinner.info(f"Took {_td_2} second(s) to compute {_ut_ds:n} untranslated sentence(s).")
+            untranslated = untranslated_dataset.unique('text')
+            _ut_ds = len(untranslated) # _ds - len(_translated)
+            spinner.info(f"Took {timedelta(seconds=_td_2)} second(s) to compute {_ut_ds:n} untranslated sentence(s).")
+            
+            assert _ds - _t_ds == _ut_ds, f"{_ds=} - {_t_ds=} ({_ds - _t_ds}) != {_ut_ds=}"
+            
             spinner.start()
             
+
             # Translate untranslated data
             time_before_3 = time.perf_counter()
             spinner.info("Translating untranslated sentences...")
-            spinner.start()
-            spinner.text = f"Processing first batch of {batch_size} sentences ({_ut_ds:n} total)... please wait for statistics."
-            _i, _t = 0, 0
             
-            for batch in untranslated_dataset.iter(batch_size):
+            # def _translate_sentence(example):
+            #     # os.environ["CUDA_VISIBLE_DEVICES"] = str(rank or 0 % torch.cuda.device_count())
+            #     e = example['text']
+            #     # _translated += e
+            #     t = translate_sentence(e, translator)
+            #     # translations += t
+            #     return {'text': t}
+
+            # translation_dataset = untranslated_dataset.map(_translate_sentence, num_proc=n_proc, batched=True, batch_size=batch_size, cache_file_name=f"{translated_input_path}")
+            
+            i, _i, _t = 0, 0, 0
+            epoch_split = int(_ut_ds / n_epoch)
+            spinner.info(f"Epoch size: {epoch_split:n}")
+
+            assert epoch_split > 0 and epoch_split < _ut_ds, f"Value for {epoch_split=} is too big! Must be smaller than the amount of sentences to translate ({_ut_ds})."
+
+            spinner.start()
+            spinner.text = f"Processing first epoch of {epoch_split:n} sentences by batch of {batch_size:n} ({_ut_ds:n} ({n_epoch:n} epochs) total)..."
+            
+            
+            for epoch in untranslated_dataset.iter(epoch_split):
                 _t = time.perf_counter()
-                _batch_text =  batch['text']
-                _translated += _batch_text
-                translations += translate_sentence(_batch_text, translator)
+                _epoch_text =  epoch['text']
+                _translated += _epoch_text
+                translations += translate_sentence(_epoch_text, translator)
                 time_meanwhile = time.perf_counter()
                 _td = time_meanwhile - _t
                 _td2 = time_meanwhile - time_before_3
-                _i += batch_size
-                _avg1 = batch_size/_td
-                _avg2 = _i/_td2
-                _avg = (_avg1 + _avg2)/2
-                _eta = (_ut_ds - _i) / _avg
-                spinner.text = f"[{_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_avg:.2f} sentences / second | ETA : {datetime.timedelta(seconds=_eta)}]"
+                i += 1
+                _i += epoch_split
+                _avg1 = epoch_split/_td
+                #_avg2 = _i/_td2
+                #_avg = (_avg1 + _avg2)/2
+                _etr = (_ut_ds - _i) / _avg1
+                spinner.text = f"Epoch {i:n}/{n_epoch:n} | {_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_avg1:.2f} translation(s) / second | ETR: {timedelta(seconds=_etr)} | dT: {timedelta(seconds=_td)}"
             
             time_after_3 = time.perf_counter()
             _td_3 = time_after_3 - time_before_3
-            spinner.text = ""
+            spinner.text = "Checking translation results.. please wait."
+            
+            if _ds != (_t_ds + _ut_ds) or _ds != len(translations):
+                is_fail = True
+                print(f"Loaded {_ds} sentences in {_from} for translation in {_to}.")
+                if _ds == (_t_ds + _ut_ds):
+                    print(f"Found {_t_ds} sentences already translated.")
+                    print(f"So translation was done only on {_ut_ds} sentences.")
+                    is_fail = False
+                else:
+                    spinner.warn(f"{_t_ds=} + {_ut_ds=} ({(_t_ds+_ut_ds)=}) != {_ds=}")
+                if _ds == len(translations):
+                    print(f"You have translated all {_ds} sentences.")
+                    is_fail = False
+                else:
+                    length_translations = len(translations)
+                    spinner.fail(f"{_ds=} != {length_translations=}")
+                    print(f"Not all {_ds} sentences have been translated.")
+                    print(f"Only {length_translations} have been.")
+                    is_fail = True
+                if is_fail: sys.exit(1)
+            
             spinner.succeed("Translation completed.")
-            spinner.info(f"Took {_td_3:.1f} second(s) to translate {_ut_ds:n} sentences.")
+            spinner.info(f"Took {timedelta(seconds=_td_3)} second(s) to translate {_ut_ds:n} sentences.")
 
             # Report translation
             time_after = time.perf_counter()
             _td = time_after - time_before
-            spinner.succeed(f"All files in {args.directory} have been translated from {_from} to {_to}.")
+            spinner.succeed(f"All files in {source_path} have been translated from {_from} to {_to}.")
             _sgb = _ut_ds >> 30
             if _sgb > 0:
-                spinner.info(f"Took {_td:.1f} second(s) to translate over {_sgb} GB (~ {float(_ut_ds >> 27)/_td:.1f} Gb/s).")
+                spinner.info(f"Took {timedelta(seconds=_td)} second(s) to translate over {_sgb} GB (~ {float(_ut_ds >> 27)/_td:.1f} Gb/s).")
             else:
-                spinner.info(f"Took {_td:.1f} second(s) to translate less than 1 GB.")
+                spinner.info(f"Took {timedelta(seconds=_td)} second(s) to translate less than 1 GB.")
 
             if Path(cache).exists(): shutil.rmtree(cache)
 
         except UserWarning:
             pass
+        except RuntimeError as re:
+            spinner.warn("You are about to loose your progress!")
+            if args.save and translations and _translated:
+                with Path(translated_input_path) as p:
+                    if not p.parent.exists():
+                        p.parent.mkdir(parents=True, exist_ok=True)
+                    if p.exists(): os.remove(p)
+                    utils.save_txt(_translated, p)
+                with Path(output_path) as _p:
+                    if _p.exists():
+                        os.remove(_p)
+                    utils.save_txt(translations, _p)         
+                spinner.succeed(f"Partial translation has been saved under {output_path}.")
+            raise re
         except KeyboardInterrupt as e:
             spinner.warn("You are about to loose your progress!")
             if args.save and translations and _translated:
                 with Path(translated_input_path) as p:
                     if not p.parent.exists():
                         p.parent.mkdir(parents=True, exist_ok=True)
+                    if p.exists(): os.remove(p)
                     utils.save_txt(_translated, p)
-                utils.save_txt(translations, Path(output_path))            
+                with Path(output_path) as _p:
+                    if _p.exists(): os.remove(_p)
+                    utils.save_txt(translations, _p)
                 spinner.succeed(f"Partial translation has been saved under {output_path}.")
             sys.exit(1)
     else:
@@ -275,12 +378,14 @@ def main():
         translations.append(translation)
     
     if args.save:
-        if not Path(args.save).exists():
-            utils.save_txt(translations, Path(args.save))
-        else:
-            spinner.warn(f"{args.save} exists already.")
-            spinner.info("Translated sentences will be added at the end of the file.")
-            utils.save_txt(translations, Path(args.save), append=True)
+        with Path(args.save) as p:
+            if not p.exists():
+                utils.save_txt(translations, p)
+            else:
+                spinner.warn(f"{args.save} exists already.")
+                spinner.info("Translated sentences will be overwritten.")
+                if p.exists(): os.remove(p)
+                utils.save_txt(translations, p)
 
 if __name__ == "__main__":
     try:

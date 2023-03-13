@@ -24,6 +24,8 @@ setup(
         'datasets~=2.10.1',
         'halo~=0.0.31',
         'psutil~=5.9.4',
+        'shutils~=0.1.0',
+        'accelerate~=0.17.0',
     ],
     entry_points={
         'console_scripts': [

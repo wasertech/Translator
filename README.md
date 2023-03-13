@@ -25,7 +25,7 @@ Using `translate` from your favorite shell.
 
 ```zsh
 ❯ translate --help
-usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-L]
+usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-e NEPOCH] [-L]
                  [_from] [_to] [sentences ...]
 
 Translate [FROM one language] [TO another], [any SENTENCE you would like].
@@ -51,6 +51,8 @@ options:
                         Number of sentences to batch for translation.
   -n NPROC, --nproc NPROC
                         Number of process to spawn for filtering untraslated sentences.
+  -e NEPOCH, --nepoch NEPOCH
+                        Number of epoch(s) to translate batched sentences.
   -L, --language_list   Show list of languages.
 ```
 
@@ -69,8 +71,36 @@ Esto es español.
 You can also easily `translate` files from a `--directory` and `--save` to a file.
 
 ```zsh
-❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn 
+❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn -n 24 -e 1000 -b 64
 ```
+
+Define:
+  - `--nepoch (-e)` as small as possible but as big as necessary.
+    
+    Translator uses this number `e` of epoch to determine the rate of time between updates by the amount of sentences given for translation at once.
+
+    If this number is too small, you will face Out-Of-Memory (OOM) errors.
+    If it is too big, you will get poor efficency.
+
+    Keep it between 1 and the sum of sentences to translate.
+
+    For maximum efficency keep it as low as you can while beeing able to fit `epoch_split` number of sentences into `device`'s memory.
+
+  - `--batch_size (-b)` as big as possible but as small as necessary.
+
+    Translator uses this value every time it needs to batch sentences to work on them.
+
+    Mostly impacts the amount of sentences to batch togheter from `epoch_split` sentences to translate in one go.
+
+    Keep it as high as possible (<`epoch_split`) but as low as your `device` memory allows to (<=1).
+
+    For GPU using multiples of `2` is best for memory optimization (i.e. `2`, `4`, `8`, `16`, `32`, `64`, `128`, `256`, `512`, etc.).
+
+  - `--nproc (-n)` to equal your amount of virtual threads on CPU for maximum performance.
+
+    This value is used by translator everytime multiples sentences need to be processed by the CPU.
+
+    Keeping it at its highest possible value, garanties maximum performances during untranslated sentnces filtering and batched sentences translation. 
 
 Using `Translator` with `python`.
 
