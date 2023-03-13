@@ -501,8 +501,8 @@ def main():
                 #_avg = (_avg1 + _avg2)/2
                 _etr = (_ut_ds - _i) / _avg1
                 update = f"Epoch {i:n}/{nepoch:n} | {_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_avg1:.2f} translation(s) / second | ETR: {timedelta(seconds=_etr)} | dT: {timedelta(seconds=_td)}"
-                if is_interactive and spinner: spinner.text = update
                 _log(update, logger, spinner, 'debug' if args.debug else 'info')
+                if is_interactive and spinner: spinner.text = update
             
             time_after_3 = time.perf_counter()
             _td_3 = time_after_3 - time_before_3
