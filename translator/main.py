@@ -9,6 +9,8 @@ from pathlib import Path
 from argparse import ArgumentParser
 from datasets import load_dataset, Dataset
 from halo import Halo
+import pyarrow as pa
+import pyarrow.compute as compute
 from translator import Translator, utils, __version__
 from translator.language import get_nllb_lang, get_sys_lang_format
 
@@ -196,7 +198,8 @@ def main():
             translate_dataset = load_dataset('text', data_files=translate_data_files, split="translate", cache_dir=cache)
             mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
             spinner.info(f"RAM memory used by translate dataset: {(mem_after - mem_before):n} MB")
-            _ds = translate_dataset.dataset_size
+            to_translate = translate_dataset.unique('text')
+            _ds = len(to_translate)
             spinner.info(f"Translating {_ds:n} sentences...")
             spinner.start()
             
@@ -209,22 +212,24 @@ def main():
                 translated_dataset = load_dataset('text', data_files=translated_data_files, split="translated", cache_dir=cache)
                 mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
                 spinner.info(f"RAM memory used by translated dataset: {(mem_after - mem_before):n} MB")
-                _translated += translated_dataset['text']
-                spinner.info(f"Translated {len(_translated):n} sentences already.")
+                been_translated = translated_dataset.unique('text')
+                _t_ds = len(been_translated)
+                _translated += been_translated
+                spinner.info(f"Translated {_t_ds:n} sentences already.")
                 
                 mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
                 translation_dataset = load_dataset('text', data_files=translation_data_files, split="translation", cache_dir=cache)
                 mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
                 spinner.info(f"RAM memory used by translation dataset: {(mem_after - mem_before):n} MB")
-                translations += translation_dataset['text']
-                
+                translations += translation_dataset.unique('text')
                 spinner.start()
             else:
+                _t_ds = 0
                 spinner.info("Not translated any sentences yet.")
                 spinner.start()
             time_after_1 = time.perf_counter()
             _td_1 = time_after_1 - time_before_1
-            spinner.info(f"Took {timedelta(seconds=_td_1)} second(s) to load {len(_translated):n} translated sentence(s).")
+            spinner.info(f"Took {timedelta(seconds=_td_1)} second(s) to load {_t_ds:n} translated sentence(s).")
             spinner.start()
 
             # Filter translated data from all data to get untranslated data
@@ -235,18 +240,30 @@ def main():
                 untranslated_dataset = translate_dataset
             else:
                 spinner.info("Filtering untranslated sentences...")
-                #spinner.start()
-                #spinner.text = "Please wait..."
-                untranslated_dataset = translate_dataset.filter(lambda x: {'text': x['text'] if x['text'] not in _translated else ""}, num_proc=n_proc, batched=True, batch_size=batch_size)
+                # spinner.start()
+                # spinner.text = "Filtering translated sentences..."
+                # translate_table = translate_dataset.data
+                # translated_table_mask = pa.array([True if t not in _translated else False for t in to_translate])
+                # #flags = compute.is_in(table['text'], value_set=pa.array(_translated, pa.string()))
+                # filtered_table = translate_table.filter(translated_table_mask)
+                # untranslated_dataset = Dataset(filtered_table, translate_dataset.info, translate_dataset.split)
+                #untranslated_dataset = translate_dataset.filter(lambda x: [x['text'] not in _translated], num_proc=n_proc, batched=True, batch_size=batch_size)
+                untranslated = { 'text': list( set(to_translate) - set(_translated) ) }
+                untranslated_dataset = Dataset.from_dict(untranslated)
                 spinner.text = ""
             mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
             spinner.info(f"RAM memory used by untranslated dataset: {(mem_after - mem_before):n} MB")
             time_after_2 = time.perf_counter()
             _td_2 = time_after_2 - time_before_2
-            _ut_ds = untranslated_dataset.dataset_size # _ds - len(_translated)
+            untranslated = untranslated_dataset.unique('text')
+            _ut_ds = len(untranslated) # _ds - len(_translated)
             spinner.info(f"Took {timedelta(seconds=_td_2)} second(s) to compute {_ut_ds:n} untranslated sentence(s).")
+            
+            assert _ds - _t_ds == _ut_ds, f"{_ds=} - {_t_ds=} ({_ds - _t_ds}) != {_ut_ds=}"
+            
             spinner.start()
             
+
             # Translate untranslated data
             time_before_3 = time.perf_counter()
             spinner.info("Translating untranslated sentences...")
@@ -264,6 +281,9 @@ def main():
             i, _i, _t = 0, 0, 0
             epoch_split = int(_ut_ds / n_epoch)
             spinner.info(f"Epoch size: {epoch_split:n}")
+
+            assert epoch_split > 0 and epoch_split < _ut_ds, f"Value for {epoch_split=} is too big! Must be smaller than the amount of sentences to translate ({_ut_ds})."
+
             spinner.start()
             spinner.text = f"Processing first epoch of {epoch_split:n} sentences by batch of {batch_size:n} ({_ut_ds:n} ({n_epoch:n} epochs) total)..."
             
@@ -279,14 +299,35 @@ def main():
                 i += 1
                 _i += epoch_split
                 _avg1 = epoch_split/_td
-                _avg2 = _i/_td2
-                _avg = (_avg1 + _avg2)/2
-                _etr = (_ut_ds - _i) / _avg
-                spinner.text = f"Epoch {i:n}/{n_epoch:n} | {_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_avg:.2f} translation(s) / second | ETR: {timedelta(seconds=_etr)} | dT: {timedelta(seconds=_td)}"
+                #_avg2 = _i/_td2
+                #_avg = (_avg1 + _avg2)/2
+                _etr = (_ut_ds - _i) / _avg1
+                spinner.text = f"Epoch {i:n}/{n_epoch:n} | {_i:n}/{_ut_ds:n} ({_i/_ut_ds:.2%}) | ~{_avg1:.2f} translation(s) / second | ETR: {timedelta(seconds=_etr)} | dT: {timedelta(seconds=_td)}"
             
             time_after_3 = time.perf_counter()
             _td_3 = time_after_3 - time_before_3
-            spinner.text = ""
+            spinner.text = "Checking translation results.. please wait."
+            
+            if _ds != (_t_ds + _ut_ds) or _ds != len(translations):
+                is_fail = True
+                print(f"Loaded {_ds} sentences in {_from} for translation in {_to}.")
+                if _ds == (_t_ds + _ut_ds):
+                    print(f"Found {_t_ds} sentences already translated.")
+                    print(f"So translation was done only on {_ut_ds} sentences.")
+                    is_fail = False
+                else:
+                    spinner.warn(f"{_t_ds=} + {_ut_ds=} ({(_t_ds+_ut_ds)=}) != {_ds=}")
+                if _ds == len(translations):
+                    print(f"You have translated all {_ds} sentences.")
+                    is_fail = False
+                else:
+                    length_translations = len(translations)
+                    spinner.fail(f"{_ds=} != {length_translations=}")
+                    print(f"Not all {_ds} sentences have been translated.")
+                    print(f"Only {length_translations} have been.")
+                    is_fail = True
+                if is_fail: sys.exit(1)
+            
             spinner.succeed("Translation completed.")
             spinner.info(f"Took {timedelta(seconds=_td_3)} second(s) to translate {_ut_ds:n} sentences.")
 

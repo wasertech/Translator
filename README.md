@@ -71,7 +71,7 @@ Esto es español.
 You can also easily `translate` files from a `--directory` and `--save` to a file.
 
 ```zsh
-❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn -n 24 -b 256 -e 10000
+❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn -n 24 -e 500000 -b 64
 ```
 
 Define:
