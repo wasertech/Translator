@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel", "transformers", "torch", "langcodes", "datasets", "halo", "psutil", "shutils", "accelerate", "questionary"]
+requires = ["setuptools", "wheel", "transformers", "torch", "langcodes", "datasets", "halo", "psutil", "shutils", "questionary"]
 
 [tool.black]
 # better to keep default line-length than to match flake8
