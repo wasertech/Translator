@@ -77,7 +77,7 @@ def _log(msg, logger=None, spinner=None, _type="info"):
         print(msg)
     return msg
 
-def print_version(version, prefix="Translator version:", _to=get_sys_lang_format(), is_interactive=False, spinner=None, logger=None, max_length=max_translation_lenght, model_id=default_translator_model, pipeline=default_translator_pipeline):
+def print_version(version, prefix="Translator version:", _from="eng_Latn", _to=get_sys_lang_format(), is_interactive=False, spinner=None, logger=None, max_length=max_translation_lenght, model_id=default_translator_model, pipeline=default_translator_pipeline):
     _version = prefix
     _lang = "eng_Latn"
     v = None
