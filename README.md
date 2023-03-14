@@ -187,7 +187,7 @@ On my Threadripper 2920X's 24 threads,
 using my RTX 3060's 12 Gb of space, 
 I can peak at ~97 translations/second averaging a bit lower at 83.
 
-I have not tested yet on my two RTX Titans but if you can distribute the computation, you'll have to do it manually for now.
+I have not tested yet on my two RTX Titans but if you want to distribute the computation, you'll have to do it manually for now.
 It's in my todo list but I won't be offended if you send me a pull request to implement it.
 
 Using `Translator` with `python`.
