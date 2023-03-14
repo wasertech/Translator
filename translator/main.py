@@ -77,13 +77,11 @@ def _log(msg, logger=None, spinner=None, _type="info"):
         print(msg)
     return msg
 
-def print_version(version, prefix="Translator version:", _from="eng_Latn", _to=get_sys_lang_format(), is_interactive=False, spinner=None, logger=None, max_length=max_translation_lenght, model_id=default_translator_model, pipeline=default_translator_pipeline):
-    _version = prefix
-    _lang = "eng_Latn"
+def print_version(version, prefix="Translator version:", _from="eng_Latn", _to=get_sys_lang_format(), is_interactive=False, spinner=None, logger=None, max_length=max_translation_lenght, model_id=default_translator_model, pipeline=default_translator_pipeline, batch_size=1, nproc=1):
     v = None
 
-    if _to == _lang:
-        v = f"{_version} {version}"
+    if _to == _from:
+        v = f"{prefix} {version}"
     else:
         try:
             _log("Preparing to translate...", logger, spinner, 'info')
@@ -92,17 +90,23 @@ def print_version(version, prefix="Translator version:", _from="eng_Latn", _to=g
                 spinner.start()
                 spinner.text = "Please be patient."
 
-            translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline, batch_size=args.batch_size, n_proc=args.nproc)
+            translator = Translator(_from, _to, max_length, model_id, pipeline, batch_size=batch_size, n_proc=nproc)
             
             if is_interactive and spinner:
                 spinner.text = ""
                 spinner.stop()
-            translated_version = translate_sentence(_version, translator)
-            v = f"{translated_version[0]} {version}"
+            
+            translated_version = translate_sentence(prefix, translator)
+            if not translated_version:
+                e = "Sorry could not translate version number.\nHere is the English version of Translator anyway:"
+                _log(e, logger, spinner, 'warning')
+                v = f"{prefix} {version}"
+            else:
+                v = f"{translated_version[0]} {version}"
         except RuntimeError as re:
             e = f"Sorry could not translate version number due to to the following runtime error:\n{str(re)}\nHere is the English version of Translator anyway:"
             _log(e, logger, spinner, 'error')
-            v = f"{_version} {version}"
+            v = f"{prefix} {version}"
     if v: return _log(v, logger, spinner, "info")
     return
 
@@ -145,7 +149,7 @@ def main():
     ]
 
     if args.version or args._from in fetch_version:
-        print_version(__version__, _to="".join(args._to) or get_sys_lang_format(), is_interactive=is_interactive, spinner=spinner, logger=logger, max_length=args.max_length, model_id=args.model_id, pipeline=args.pipeline)
+        print_version(__version__, _to="".join(args._to) or get_sys_lang_format(), is_interactive=is_interactive, spinner=spinner, logger=logger, max_length=args.max_length, model_id=args.model_id, pipeline=args.pipeline, batch_size=args.batch_size)
         sys.exit(0)
 
     fetch_languages = [
@@ -182,15 +186,13 @@ def main():
 
     if not _from and not _to and not _sentences and not _directory and is_interactive:
         _log("Welcome!", logger, spinner, 'info')
-        _log("I am Translator.", logger, spinner, 'info')
-        print_version(__version__, prefix="I am Translator version:", _to="".join(args._to) or 'eng_Latn', is_interactive=is_interactive, spinner=spinner, logger=logger, max_length=args.max_length, model_id=args.model_id, pipeline=args.pipeline)
+        print_version(__version__, prefix="I am Translator version:", _to="".join(args._to) or 'eng_Latn', is_interactive=is_interactive, spinner=spinner, logger=logger, max_length=args.max_length, model_id=args.model_id, pipeline=args.pipeline, batch_size=args.batch_size, nproc=args.nproc)
         _log("At your service.", logger, spinner, 'info')
 
         options = ["Manually typed sentences", "Stored sentences in file(s)", "Nothing, just exit"]
 
         options_map = {}
-        for i, o in enumerate(options):
-            options_map[o] = i
+        for i, o in enumerate(options): options_map[o] = i
 
         # Prompt sentences input method
         translate_from = questionary.select(
@@ -212,11 +214,19 @@ def main():
         
         # Prompt source language
         source_language = questionary.text("What language to translate from?").ask()
+        if not source_language:
+            _log("Exiting.", logger, spinner, 'info')
+            sys.exit(1)
+        
         _from = get_nllb_lang(source_language)
         _log(f"Translating from {_from}.", logger, spinner, 'info')
         
         # Prompt target language
         target_language = questionary.text("What language to translate to?", default=get_sys_lang_format()).ask()
+        if not target_language:
+            _log("Exiting.", logger, spinner, 'info')
+            sys.exit(1)
+        
         _to = get_nllb_lang(target_language)
         _log(f"Translating to {_to}.", logger, spinner, 'info')
 
@@ -250,7 +260,8 @@ def main():
                     sentence = questionary.text("Translate:").ask()
                     if sentence:
                         translation = translate_sentence(sentence, translator)
-                        for t in translation: _log(f"{t}\n")
+                        for t in translation: _log(f"{t}")
+                        _log(" "*10)
                     else:
                         sys.exit(1)
             except KeyboardInterrupt:
