@@ -44,8 +44,8 @@ def parse_arguments():
     argument_parse.add_argument('-n', '--nproc', default=4, type=int, help="Number of process(es) to spawn for batch translation.")
     argument_parse.add_argument('-e', '--nepoch', default=1, type=int, help="Number of epoch(s) to translate batched sentences.")
     argument_parse.add_argument('-L', '--language_list', action='store_true', help="Show list of languages.")
-    argument_parse.add_argument('-vv', "--debug", action='store_true', help="File debug info")
-    argument_parse.add_argument('-i', "--interactive", action='store_false', help="Deactive interactiveness.")
+    argument_parse.add_argument('-vv', "--debug", action='store_true', help="Show debug info")
+    argument_parse.add_argument('-i', "--interactive", action='store_false', help="Deactivate interactiveness.")
     
     return argument_parse.parse_args(), argument_parse
 

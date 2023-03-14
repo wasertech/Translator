@@ -54,7 +54,7 @@ Locate Translator.
 Using `translate` from your favorite shell.
 
 ```zsh
-❯ translate --help
+❯ translate help
 usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-e NEPOCH] [-L]
                  [_from] [_to] [sentences ...]
 
@@ -119,6 +119,11 @@ What would you like to translate?
 ? Translate:                                                                                                                                                                                 
 
 Cancelled by user
+```
+
+Get Translator version.
+```zsh
+❯ translate version
 ```
 
 Translate from English in French.
