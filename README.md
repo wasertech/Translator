@@ -148,14 +148,19 @@ You can also easily `translate` files from a `--directory` and `--save` to a fil
 Define:
   - `--nepoch (-e)` as small as possible but as big as necessary.
     
-    Translator uses this number `e` of epoch to determine the rate of time between updates by the amount of sentences given for translation at once.
+    Translator uses this number `e` of epoch to determine 
+    the rate of time between updates 
+    by the amount of sentences 
+    given for translation at once.
 
     If this number is too small, you will face Out-Of-Memory (OOM) errors.
     If it is too big, you will get poor efficency.
 
     Keep it between 1 and the sum of sentences to translate.
 
-    For maximum efficency keep it as low as you can while beeing able to fit `epoch_split` number of sentences into `device`'s memory.
+    For maximum efficency keep it as low as you can while beeing able 
+    to fit `epoch_split` number of sentences 
+    into `device`'s memory.
 
   - `--batch_size (-b)` as big as possible but as small as necessary.
 
@@ -165,13 +170,25 @@ Define:
 
     Keep it as high as possible (<`epoch_split`) but as low as your `device` memory allows to (<=1).
 
-    For GPU using multiples of `2` is best for memory optimization (i.e. `2`, `4`, `8`, `16`, `32`, `64`, `128`, `256`, `512`, etc.).
+    For GPU using multiples of `2` is best for memory optimization 
+    (i.e. `2`, `4`, `8`, `16`, `32`, `64`, `128`, `256`, `512`, etc.).
 
   - `--nproc (-n)` to equal your amount of virtual threads on CPU for maximum performance.
 
     This value is used by translator everytime multiples sentences need to be processed by the CPU.
 
-    Keeping it at its highest possible value, garanties maximum performances during untranslated sentnces filtering and batched sentences translation. 
+    Keeping it at its highest possible value, 
+    garanties maximum performances. 
+
+With a good processor and a single fast and large GPU, 
+you can translate an average just shy of a 100 sentences per second.
+
+On my Threadripper 2920X's 24 threads, 
+using my RTX 3060's 12 Gb of space, 
+I can peak at ~97 translations/second averaging a bit lower at 83.
+
+I have not tested yet on my two RTX Titans but if you can distribute the computation, you'll have to do it manually for now.
+It's in my todo list but I won't be offended if you send me a pull request to implement it.
 
 Using `Translator` with `python`.
 
@@ -193,7 +210,8 @@ print(f"{french_sentence=}")
 
 ## Languages
 
-Depending on models used, you might get fewer choices but with `NLLB` you get more than 200 most popular ones.
+Depending on models used, you might get fewer choices 
+but with `NLLB` you get more than 200 most popular ones.
 
 ```zsh
 # translate -L
@@ -223,14 +241,31 @@ Checkout [`LANGS`](translator/language.py) to see the full list of supported lan
 
 This project is distributed under [Mozilla Public License 2.0](LICENSE).
 
-Using this tool to translate a sentence, the licence of the original sentence still applies unless specified otherwise.
+Using this tool to translate a sentence, 
+the licence of the original sentence still applies unless specified otherwise.
 
-Meaning, if you translate a sentence under [Creative Commons CC0](https://creativecommons.org/share-your-work/public-domain/cc0/), the translation is also under Creative Commons CC0.
+Meaning, 
+if you translate a sentence 
+under [Creative Commons CC0](https://creativecommons.org/share-your-work/public-domain/cc0/), 
+the translation is also under Creative Commons CC0.
 
 Idem for any licence.
 
 ## Contribution
 
-I love stars ⭐ but also chocolate 🍫 so don't hesitate to [sponsor this project](https://github.com/sponsors/wasertech)!
+I love stars ⭐ 
+but also chocolate 🍫 
+so don't hesitate 
+to [sponsor this project](https://github.com/sponsors/wasertech)!
 
-Otherwise if you like the project and want to see it grow and get more convenience features like a dedicated service/client to speed up multiple translations. Don't hesitate to share your ideas by opening a ticket or even proposing a pull request.
+Otherwise 
+if you like the project 
+and want to see it grow, 
+get more convenience features 
+like a dedicated service/client 
+to speed up multiple translations,
+etc. 
+
+Don't hesitate to share your ideas 
+by opening a ticket 
+or even proposing a pull request.
