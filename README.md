@@ -237,6 +237,12 @@ From `python`:
 
 Checkout [`LANGS`](translator/language.py) to see the full list of supported languages.
 
+## Using a custom model
+
+Checkout [HuggingFace Zoo of Translation Models](https://huggingface.co/models?pipeline_tag=translation&sort=downloads).
+
+Or [train your own model](https://huggingface.co/autotrain) for the `translate` or `translate_xx_to_xx` pipeline.
+
 ## License
 
 This project is distributed under [Mozilla Public License 2.0](LICENSE).
