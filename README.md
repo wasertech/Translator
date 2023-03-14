@@ -182,8 +182,8 @@ translator = Translator("eng_Latn", "fra_Latn")
 
 english_sentence = "This is just a simple phrase." or [
     "Those are multiples sentences.",
-    "If you have lots of them, load them directly from file",
-    "To efficeienty batch translate them."
+    "If you have lots of them, load them directly from file.",
+    "To efficiently batch translate them."
   ]
 french_sentence = translator.translate(english_sentence)
 
