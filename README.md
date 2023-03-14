@@ -127,7 +127,7 @@ Translate from English in French.
 C'est français.
 
 ❯ LANG="fr_CH.UTF-8" translate en "This is also French."
-C'est aussi du français.
+C'est aussi français.
 ```
 
 Translate from English in Spanish.
