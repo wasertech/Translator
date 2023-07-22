@@ -16,7 +16,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=find_packages('.'),
-    python_requires='>=3.8,<3.11',
+    python_requires='>=3.8,<3.12',
     install_requires = [
         'transformers~=4.25.1',
         'langcodes~=3.3.0',
