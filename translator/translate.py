@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 import torch
 import logging
 
-logger = logging.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 class Translator:
     
