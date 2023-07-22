@@ -175,7 +175,7 @@ def main():
         if args.model_id == "facebook/nllb-200-distilled-600M":
             for l in get_nllb_lang(): print(f"- {l}")
         else:
-            raise NotImplementedError(f"{model_id=} language list not implemented.")
+            raise NotImplementedError(f"{args.model_id=} language list not implemented.")
         print()
         sys.exit(0)
 
