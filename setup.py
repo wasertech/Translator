@@ -18,9 +18,9 @@ setup(
     packages=find_packages('.'),
     python_requires='>=3.8,<3.12',
     install_requires = [
-        'transformers~=4.25.1',
+        'transformers~=4.31.0',
         'langcodes~=3.3.0',
-        'datasets~=2.10.1',
+        'datasets~=2.13.1',
         'halo~=0.0.31',
         'psutil~=5.9.4',
         'shutils~=0.1.0',
