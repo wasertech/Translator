@@ -479,6 +479,7 @@ def main():
             _ut_ds = len(untranslated) # _ds - len(_translated)
             _log(f"Took {timedelta(seconds=_td_2)} second(s) to compute {_ut_ds:n} untranslated sentence(s).", logger, spinner, 'debug')
             
+            # Lets be absolutely sure we have the right amount of sentences
             assert _ds - _t_ds == _ut_ds, _log(f"{_ds=} - {_t_ds=} ({_ds - _t_ds}) != {_ut_ds=}", logger, spinner, 'error')
             
             if is_interactive and spinner: spinner.start()
@@ -486,26 +487,29 @@ def main():
             # Translate untranslated data
             time_before_3 = time.perf_counter()
             _log("Translating untranslated sentences...", logger, spinner, 'debug')
-                        
+            
             i, _i, _t = 0, 0, 0
             epoch_split = int(_ut_ds / nepoch)
             _log(f"Epoch size: {epoch_split:n}", logger, spinner, 'info')
 
+            # Lets be absolutely sure epoch_split is not too small or too big
             assert epoch_split > 0, _log(f"Value for {epoch_split=} is too small! Must be greater than 0.", logger, spinner, 'error')
             assert epoch_split < _ut_ds, _log(f"Value for {epoch_split=} is too big! Must be smaller than the amount of sentences to translate ({_ut_ds}).", logger, spinner, 'error')
 
             if is_interactive and spinner:
                 spinner.start()
                 spinner.text = f"Processing first epoch of {epoch_split:n} sentences by batch of {batch_size:n} ({_ut_ds:n} ({nepoch:n} epochs) total)..."
-                        
+            
             for epoch in untranslated_dataset.iter(epoch_split):
                 _t = time.perf_counter()
                 _epoch_text =  epoch['text']
                 _translated += _epoch_text
+                # Here we translate the epoch
                 translations += translate_sentence(_epoch_text, translator)
+                # Then we update statistics
                 time_meanwhile = time.perf_counter()
                 _td = time_meanwhile - _t
-                _td2 = time_meanwhile - time_before_3
+                #_td2 = time_meanwhile - time_before_3
                 i += 1
                 _i += epoch_split
                 _avg1 = epoch_split/_td
