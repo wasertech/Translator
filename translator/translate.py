@@ -20,7 +20,7 @@ class Translator:
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.logger.debug(f"{self.device}")
         self.logger.debug("Loading model...")
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_id, max_length=max_length, device=self.device)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_id, max_length=max_length)
         self.logger.debug("Loading tokenizer...")
         self.tokenizer = AutoTokenizer.from_pretrained(model_id, max_length=max_length)
         self.logger.debug("Setting up translation pipeline...")
