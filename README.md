@@ -163,7 +163,7 @@ Define:
 
     Keep it between 1 and the sum of sentences to translate.
 
-    For maximum efficency keep it as low as you can while beeing able 
+    For maximum efficiency keep it as low as you can while being able 
     to fit `epoch_split` number of sentences 
     into `device`'s memory.
 
