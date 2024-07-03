@@ -173,7 +173,7 @@ Define:
 
     Mostly impacts the amount of sentences to batch togheter from `epoch_split` sentences to translate in one go.
 
-    Keep it as high as possible (<`epoch_split`) but as low as your `device` memory allows to (<=1).
+    Keep it as high as possible (<`epoch_split`) but as low as your `device` memory allows to (>=1).
 
     For GPU using multiples of `2` is best for memory optimization 
     (i.e. `2`, `4`, `8`, `16`, `32`, `64`, `128`, `256`, `512`, etc.).
