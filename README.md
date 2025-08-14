@@ -55,7 +55,7 @@ Using `translate` from your favorite shell.
 
 ```zsh
 ❯ translate help
-usage: translate [-h] [-v] [-d DIRECTORY] [--po] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-e NEPOCH] [-L]
+usage: translate [-h] [-v] [-d DIRECTORY] [--po] [--force] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-e NEPOCH] [-L]
                  [_from] [_to] [sentences ...]
 
 Translate [FROM one language] [TO another], [any SENTENCE you would like].
@@ -71,6 +71,7 @@ options:
   -d DIRECTORY, --directory DIRECTORY
                         Path to directory to translate in batch instead of unique sentence.
   --po                  Translate PO (Portable Object) files instead of text files.
+  --force               Force translation of all entries in PO files, including already translated ones.
   -S SAVE, --save SAVE  Path to text file to save translations.
   -l MAX_LENGTH, --max_length MAX_LENGTH
                         Max length of output.
@@ -153,7 +154,9 @@ You can also easily `translate` files from a `--directory` and `--save` to a fil
 
 ## PO File Translation
 
-Translator supports translating PO (Portable Object) files commonly used with gettext for localization. This is perfect for Poedit workflows.
+Translator supports translating PO (Portable Object) files commonly used with gettext for localization. This is perfect for Poedit workflows and supports multi-language projects.
+
+### Basic Usage
 
 Translate all PO files in a directory:
 ```zsh
@@ -165,11 +168,34 @@ Translate a single PO file:
 ❯ translate --po eng_Latn fra_Latn messages.po
 ```
 
-The `--po` flag enables PO file mode which:
-- Preserves all PO file metadata, comments, and structure
-- Only translates untranslated entries (empty `msgstr` fields)
-- Updates PO files in-place with translations
-- Supports recursive directory processing to find all `.po` files
+### Advanced Features
+
+#### Language-Aware Translation
+The `--po` flag includes smart language detection that reads Language metadata from PO files. This prevents accidentally translating all language files in a multi-language project:
+
+```zsh
+# In a Django project with locale/en/, locale/fr/, locale/es/ directories
+❯ translate --po --directory . eng_Latn fra_Latn
+# Only translates English PO files (Language: en), skips French and Spanish files
+```
+
+#### Force Translation Mode
+Use `--force` to retranslate all entries, including already translated ones:
+
+```zsh
+❯ translate --po --force --directory locales eng_Latn deu_Latn
+# Translates ALL entries, not just empty msgstr fields
+```
+
+### Key Features
+
+The `--po` mode:
+- **Preserves Structure**: Maintains all PO file metadata, comments, and formatting
+- **Language Detection**: Reads Language metadata to determine which files to translate
+- **Selective Translation**: Only translates untranslated entries by default (empty `msgstr` fields)  
+- **Multi-Language Safety**: Skips files that don't match the source language
+- **Recursive Processing**: Finds all `.po` files in nested directory structures
+- **Batch Optimization**: Uses Translator's optimized algorithms for efficiency
 
 This allows you to leverage Translator's optimized batch translation algorithm on your localization files while maintaining compatibility with Poedit and other gettext tools.
 
@@ -246,15 +272,22 @@ translator = Translator("eng_Latn", "spa_Latn")
 
 # Process a PO file
 po_file = utils.read_po_file("messages.po")
-untranslated = utils.extract_untranslated_from_po(po_file)
 
-# Translate the untranslated entries
-translations = translator.translate(untranslated)
-
-# Create translation mapping and update PO file
-translation_dict = dict(zip(untranslated, translations))
-utils.update_po_with_translations(po_file, translation_dict)
-utils.save_po_file(po_file, "messages.po")
+# Check if file should be translated based on language metadata
+if utils.should_translate_po_file(po_file, "eng_Latn"):
+    # Extract entries (untranslated by default, or all with force=True)
+    untranslated = utils.extract_untranslated_from_po(po_file)
+    # For force mode: all_entries = utils.extract_all_from_po(po_file)
+    
+    # Translate the entries
+    translations = translator.translate(untranslated)
+    
+    # Create translation mapping and update PO file
+    translation_dict = dict(zip(untranslated, translations))
+    utils.update_po_with_translations(po_file, translation_dict, force=False)
+    utils.save_po_file(po_file, "messages.po")
+else:
+    print("PO file language doesn't match source language")
 ```
 
 ## Languages
