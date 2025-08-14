@@ -37,6 +37,7 @@ def parse_arguments():
     argument_parse.add_argument('sentences', nargs="*", default=[], help="Sentences to translate.")
     argument_parse.add_argument('-d', '--directory', type=str, help="Path to directory to translate in batch instead of unique sentence.")
     argument_parse.add_argument('--po', action='store_true', help="Translate PO (Portable Object) files instead of text files.")
+    argument_parse.add_argument('--force', action='store_true', help="Force translation of all entries in PO files, including already translated ones.")
     argument_parse.add_argument('-S', '--save', type=str, help="Path to text file to save translations.")
     argument_parse.add_argument('-l', '--max_length', default=max_translation_lenght, help="Max length of output.")
     argument_parse.add_argument('-m', '--model_id', default=default_translator_model, help="HuggingFace model ID to use.")
@@ -181,7 +182,7 @@ def main():
         sys.exit(0)
 
     _from, _to, _sentences = "".join(args._from), "".join(args._to), args.sentences
-    _directory, _save_path, _po_mode = args.directory, args.save, args.po
+    _directory, _save_path, _po_mode, _force = args.directory, args.save, args.po, args.force
 
     nepoch, nproc, batch_size = args.nepoch, args.nproc, args.batch_size
 
@@ -377,7 +378,7 @@ def main():
         _log("PO file translation mode enabled.", logger, spinner, 'info')
         _log(f"Translating PO files in {_from} to {_to} from directory \'{_directory}\'.", logger, spinner, 'info')
         
-        # Find all PO files in directory
+        # Find all PO files in directory (recursive)
         po_files = utils.glob_po_files_from_dir(_directory)
         _l = len(po_files)
         if _l == 0:
@@ -386,40 +387,56 @@ def main():
         _log(f"Found {_l} PO file{'s' if _l > 1 else ''}.", logger, spinner, 'info')
         
         total_translated = 0
+        total_processed = 0
+        skipped_files = 0
+        
         for po_file_path in po_files:
             _log(f"Processing {po_file_path}...", logger, spinner, 'info')
             
             # Read PO file
             po_file = utils.read_po_file(po_file_path)
             
-            # Extract untranslated entries
-            untranslated_texts = utils.extract_untranslated_from_po(po_file)
+            # Check if this PO file should be translated based on language metadata
+            if not utils.should_translate_po_file(po_file, _from):
+                po_language = utils.get_po_language(po_file)
+                _log(f"Skipping {po_file_path} - language mismatch (PO language: {po_language or 'none'}, source: {_from})", logger, spinner, 'info')
+                skipped_files += 1
+                continue
             
-            if not untranslated_texts:
-                _log(f"No untranslated entries in {po_file_path}.", logger, spinner, 'info')
+            # Extract entries based on force flag
+            if _force:
+                texts_to_translate = utils.extract_all_from_po(po_file)
+                mode_msg = "all entries (force mode)"
+            else:
+                texts_to_translate = utils.extract_untranslated_from_po(po_file)
+                mode_msg = "untranslated entries"
+            
+            if not texts_to_translate:
+                _log(f"No {mode_msg} in {po_file_path}.", logger, spinner, 'info')
                 continue
                 
-            _log(f"Translating {len(untranslated_texts)} entries...", logger, spinner, 'info')
+            _log(f"Translating {len(texts_to_translate)} {mode_msg}...", logger, spinner, 'info')
             
             # Translate the texts
-            translations = translate_sentence(untranslated_texts, translator)
+            translations = translate_sentence(texts_to_translate, translator)
             
             # Create mapping of original text to translation
             translation_dict = {}
-            for i, original in enumerate(untranslated_texts):
+            for i, original in enumerate(texts_to_translate):
                 if i < len(translations):
                     translation_dict[original] = translations[i]
             
             # Update PO file with translations
-            utils.update_po_with_translations(po_file, translation_dict)
+            utils.update_po_with_translations(po_file, translation_dict, force=_force)
             
             # Save the updated PO file
             utils.save_po_file(po_file, po_file_path)
             
             total_translated += len(translation_dict)
+            total_processed += 1
             _log(f"Updated {po_file_path} with {len(translation_dict)} translations.", logger, spinner, 'success')
         
-        _log(f"Translation completed! Translated {total_translated} entries across {_l} PO file{'s' if _l > 1 else ''}.", logger, spinner, 'success')
+        _log(f"Translation completed! Translated {total_translated} entries across {total_processed} PO file{'s' if total_processed != 1 else ''} (processed {total_processed}/{_l}, skipped {skipped_files}).", logger, spinner, 'success')
         sys.exit(0)
     
     # Handle single PO file translation (when file path is passed as sentence)
@@ -434,26 +451,38 @@ def main():
         # Read PO file
         po_file = utils.read_po_file(po_file_path)
         
-        # Extract untranslated entries
-        untranslated_texts = utils.extract_untranslated_from_po(po_file)
+        # Check if this PO file should be translated based on language metadata
+        if not utils.should_translate_po_file(po_file, _from):
+            po_language = utils.get_po_language(po_file)
+            _log(f"Cannot translate {po_file_path} - language mismatch (PO language: {po_language or 'none'}, source: {_from})", logger, spinner, 'error')
+            _log(f"Tip: Ensure the Language metadata in the PO file matches your source language, or use a different source language.", logger, spinner, 'info')
+            sys.exit(1)
         
-        if not untranslated_texts:
-            _log(f"No untranslated entries in {po_file_path}.", logger, spinner, 'info')
+        # Extract entries based on force flag
+        if _force:
+            texts_to_translate = utils.extract_all_from_po(po_file)
+            mode_msg = "all entries (force mode)"
+        else:
+            texts_to_translate = utils.extract_untranslated_from_po(po_file)
+            mode_msg = "untranslated entries"
+        
+        if not texts_to_translate:
+            _log(f"No {mode_msg} in {po_file_path}.", logger, spinner, 'info')
             sys.exit(0)
             
-        _log(f"Translating {len(untranslated_texts)} entries...", logger, spinner, 'info')
+        _log(f"Translating {len(texts_to_translate)} {mode_msg}...", logger, spinner, 'info')
         
         # Translate the texts
-        translations = translate_sentence(untranslated_texts, translator)
+        translations = translate_sentence(texts_to_translate, translator)
         
         # Create mapping of original text to translation
         translation_dict = {}
-        for i, original in enumerate(untranslated_texts):
+        for i, original in enumerate(texts_to_translate):
             if i < len(translations):
                 translation_dict[original] = translations[i]
         
         # Update PO file with translations
-        utils.update_po_with_translations(po_file, translation_dict)
+        utils.update_po_with_translations(po_file, translation_dict, force=_force)
         
         # Save the updated PO file
         utils.save_po_file(po_file, po_file_path)
