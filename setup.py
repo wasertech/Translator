@@ -26,6 +26,7 @@ setup(
         'shutils~=0.1.0',
         'accelerate>=0.20.3',
         'questionary~=1.10.0',
+        'polib~=1.2.0',
     ],
     entry_points={
         'console_scripts': [

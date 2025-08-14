@@ -36,6 +36,7 @@ def parse_arguments():
     argument_parse.add_argument('_to', nargs='?', default=[], help="Target language to translate towards.")
     argument_parse.add_argument('sentences', nargs="*", default=[], help="Sentences to translate.")
     argument_parse.add_argument('-d', '--directory', type=str, help="Path to directory to translate in batch instead of unique sentence.")
+    argument_parse.add_argument('--po', action='store_true', help="Translate PO (Portable Object) files instead of text files.")
     argument_parse.add_argument('-S', '--save', type=str, help="Path to text file to save translations.")
     argument_parse.add_argument('-l', '--max_length', default=max_translation_lenght, help="Max length of output.")
     argument_parse.add_argument('-m', '--model_id', default=default_translator_model, help="HuggingFace model ID to use.")
@@ -180,7 +181,7 @@ def main():
         sys.exit(0)
 
     _from, _to, _sentences = "".join(args._from), "".join(args._to), args.sentences
-    _directory, _save_path = args.directory, args.save
+    _directory, _save_path, _po_mode = args.directory, args.save, args.po
 
     nepoch, nproc, batch_size = args.nepoch, args.nproc, args.batch_size
 
@@ -371,9 +372,98 @@ def main():
         spinner.text = ""
         spinner.stop()
 
+    # Handle PO file translation
+    if _po_mode and _directory and Path(_directory).exists():
+        _log("PO file translation mode enabled.", logger, spinner, 'info')
+        _log(f"Translating PO files in {_from} to {_to} from directory \'{_directory}\'.", logger, spinner, 'info')
+        
+        # Find all PO files in directory
+        po_files = utils.glob_po_files_from_dir(_directory)
+        _l = len(po_files)
+        if _l == 0:
+            _log(f"No PO files found in \'{_directory}\'.", logger, spinner, 'error')
+            sys.exit(1)
+        _log(f"Found {_l} PO file{'s' if _l > 1 else ''}.", logger, spinner, 'info')
+        
+        total_translated = 0
+        for po_file_path in po_files:
+            _log(f"Processing {po_file_path}...", logger, spinner, 'info')
+            
+            # Read PO file
+            po_file = utils.read_po_file(po_file_path)
+            
+            # Extract untranslated entries
+            untranslated_texts = utils.extract_untranslated_from_po(po_file)
+            
+            if not untranslated_texts:
+                _log(f"No untranslated entries in {po_file_path}.", logger, spinner, 'info')
+                continue
+                
+            _log(f"Translating {len(untranslated_texts)} entries...", logger, spinner, 'info')
+            
+            # Translate the texts
+            translations = translate_sentence(untranslated_texts, translator)
+            
+            # Create mapping of original text to translation
+            translation_dict = {}
+            for i, original in enumerate(untranslated_texts):
+                if i < len(translations):
+                    translation_dict[original] = translations[i]
+            
+            # Update PO file with translations
+            utils.update_po_with_translations(po_file, translation_dict)
+            
+            # Save the updated PO file
+            utils.save_po_file(po_file, po_file_path)
+            
+            total_translated += len(translation_dict)
+            _log(f"Updated {po_file_path} with {len(translation_dict)} translations.", logger, spinner, 'success')
+        
+        _log(f"Translation completed! Translated {total_translated} entries across {_l} PO file{'s' if _l > 1 else ''}.", logger, spinner, 'success')
+        sys.exit(0)
+    
+    # Handle single PO file translation (when file path is passed as sentence)
+    if _po_mode and _sentences and len(_sentences) == 1 and _sentences[0].endswith('.po'):
+        po_file_path = _sentences[0]
+        if not Path(po_file_path).exists():
+            _log(f"PO file not found: {po_file_path}", logger, spinner, 'error')
+            sys.exit(1)
+            
+        _log(f"Translating single PO file: {po_file_path}", logger, spinner, 'info')
+        
+        # Read PO file
+        po_file = utils.read_po_file(po_file_path)
+        
+        # Extract untranslated entries
+        untranslated_texts = utils.extract_untranslated_from_po(po_file)
+        
+        if not untranslated_texts:
+            _log(f"No untranslated entries in {po_file_path}.", logger, spinner, 'info')
+            sys.exit(0)
+            
+        _log(f"Translating {len(untranslated_texts)} entries...", logger, spinner, 'info')
+        
+        # Translate the texts
+        translations = translate_sentence(untranslated_texts, translator)
+        
+        # Create mapping of original text to translation
+        translation_dict = {}
+        for i, original in enumerate(untranslated_texts):
+            if i < len(translations):
+                translation_dict[original] = translations[i]
+        
+        # Update PO file with translations
+        utils.update_po_with_translations(po_file, translation_dict)
+        
+        # Save the updated PO file
+        utils.save_po_file(po_file, po_file_path)
+        
+        _log(f"Translation completed! Updated {po_file_path} with {len(translation_dict)} translations.", logger, spinner, 'success')
+        sys.exit(0)
+
     if _directory and Path(_directory).exists():
         _log("No sentence was given but directory was provided.", logger, spinner, 'info')
-        _log(f"Translate sentences in {_from} to {_to} from text files in directory \'{_directory}\' by batches of size {batch_size}.", logger, spinner, 'info')
+        _log(f"Translate sentences in {_from} to {_to} from {'PO' if _po_mode else 'text'} files in directory \'{_directory}\' by batches of size {batch_size}.", logger, spinner, 'info')
         source_path = _directory
         if not _save_path:
             _log("Translating sentences from directory without passing --save argument is forbbiden.", logger, spinner, 'error')
