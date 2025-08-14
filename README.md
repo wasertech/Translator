@@ -55,7 +55,7 @@ Using `translate` from your favorite shell.
 
 ```zsh
 ❯ translate help
-usage: translate [-h] [-v] [-d DIRECTORY] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-e NEPOCH] [-L]
+usage: translate [-h] [-v] [-d DIRECTORY] [--po] [-S SAVE] [-l MAX_LENGTH] [-m MODEL_ID] [-p PIPELINE] [-b BATCH_SIZE] [-n NPROC] [-e NEPOCH] [-L]
                  [_from] [_to] [sentences ...]
 
 Translate [FROM one language] [TO another], [any SENTENCE you would like].
@@ -70,6 +70,7 @@ options:
   -v, --version         shows the current version of translator
   -d DIRECTORY, --directory DIRECTORY
                         Path to directory to translate in batch instead of unique sentence.
+  --po                  Translate PO (Portable Object) files instead of text files.
   -S SAVE, --save SAVE  Path to text file to save translations.
   -l MAX_LENGTH, --max_length MAX_LENGTH
                         Max length of output.
@@ -150,6 +151,28 @@ You can also easily `translate` files from a `--directory` and `--save` to a fil
 ❯ translate --directory . --save en2fr.txt eng_Latn fra_Latn -n 24 -e 1000 -b 64
 ```
 
+## PO File Translation
+
+Translator supports translating PO (Portable Object) files commonly used with gettext for localization. This is perfect for Poedit workflows.
+
+Translate all PO files in a directory:
+```zsh
+❯ translate --po --directory ./locales eng_Latn fra_Latn
+```
+
+Translate a single PO file:
+```zsh  
+❯ translate --po eng_Latn fra_Latn messages.po
+```
+
+The `--po` flag enables PO file mode which:
+- Preserves all PO file metadata, comments, and structure
+- Only translates untranslated entries (empty `msgstr` fields)
+- Updates PO files in-place with translations
+- Supports recursive directory processing to find all `.po` files
+
+This allows you to leverage Translator's optimized batch translation algorithm on your localization files while maintaining compatibility with Poedit and other gettext tools.
+
 Define:
   - `--nepoch (-e)` as small as possible but as big as necessary.
     
@@ -211,6 +234,27 @@ french_sentence = translator.translate(english_sentence)
 
 print(f"{english_sentence=}")
 print(f"{french_sentence=}")
+```
+
+For PO file processing:
+
+```python
+from translator import Translator, utils
+
+# Initialize translator
+translator = Translator("eng_Latn", "spa_Latn")
+
+# Process a PO file
+po_file = utils.read_po_file("messages.po")
+untranslated = utils.extract_untranslated_from_po(po_file)
+
+# Translate the untranslated entries
+translations = translator.translate(untranslated)
+
+# Create translation mapping and update PO file
+translation_dict = dict(zip(untranslated, translations))
+utils.update_po_with_translations(po_file, translation_dict)
+utils.save_po_file(po_file, "messages.po")
 ```
 
 ## Languages
