@@ -184,10 +184,25 @@ def main():
     _from, _to, _sentences = "".join(args._from), "".join(args._to), args.sentences
     _directory, _save_path, _po_mode, _force = args.directory, args.save, args.po, args.force
 
-    # Handle PO mode with single target language argument (default source to English)
-    if _po_mode and _to and not _from:
-        _from = "eng_Latn"  # Default source language for PO translation
-        _log(f"PO mode: Defaulting source language to {_from}", logger, spinner, 'info')
+    # Validate conflicting flags
+    if _po_mode and _save_path:
+        _log("Error: --po and --save flags cannot be used together. PO files are translated in-place.", logger, spinner, 'error')
+        sys.exit(1)
+    
+    if _po_mode and not _directory:
+        _log("Error: --po flag requires --directory to be specified.", logger, spinner, 'error')
+        sys.exit(1)
+
+    # Handle PO mode - determine source and target languages
+    if _po_mode:
+        if not _from and not _to:
+            # Multi-language mode: translate all available target languages
+            _from = "eng_Latn"  # Default source language
+            _log(f"PO mode: Multi-language translation enabled. Source: {_from}, detecting all target languages.", logger, spinner, 'info')
+        elif _to and not _from:
+            # Single target language mode with default source
+            _from = "eng_Latn"  # Default source language for PO translation
+            _log(f"PO mode: Defaulting source language to {_from}", logger, spinner, 'info')
     
     # Normalize language codes (allow short codes like 'fr' to be converted to 'fra_Latn')
     if _po_mode:
@@ -388,71 +403,98 @@ def main():
     # Handle PO file translation
     if _po_mode and _directory and Path(_directory).exists():
         _log("PO file translation mode enabled.", logger, spinner, 'info')
-        _log(f"Looking for PO files in target language directories for '{_to}' in directory '{_directory}'.", logger, spinner, 'info')
         
-        # Find PO files in target language directories only
-        po_files = utils.glob_po_files_for_target_language(_directory, _to)
-        _l = len(po_files)
-        if _l == 0:
-            target_short = utils.nllb_to_short_code(_to)
-            _log(f"No PO files found in target language directories (e.g., locale/{target_short}/, {target_short}/) in '{_directory}'.", logger, spinner, 'error')
-            _log(f"Make sure your PO files are in the correct target language directory structure and have Language metadata set to '{target_short}'.", logger, spinner, 'info')
-            sys.exit(1)
-        _log(f"Found {_l} PO file{'s' if _l > 1 else ''} in target language directories.", logger, spinner, 'info')
+        # Determine target languages to translate
+        if _to:
+            # Single target language mode
+            target_languages = [_to]
+            _log(f"Looking for PO files in target language directories for '{_to}' in directory '{_directory}'.", logger, spinner, 'info')
+        else:
+            # Multi-language mode: detect all target languages
+            target_languages = utils.detect_target_languages_from_directory(_directory)
+            if not target_languages:
+                _log("No target languages found with Language metadata set in PO files.", logger, spinner, 'error')
+                _log("Set the Language metadata in your PO files to enable auto-translation (e.g., Language: fr).", logger, spinner, 'info')
+                sys.exit(1)
+            _log(f"Multi-language mode: Found {len(target_languages)} target languages: {', '.join(target_languages)}", logger, spinner, 'info')
         
-        total_translated = 0
-        total_processed = 0
-        skipped_files = 0
+        overall_total_translated = 0
+        overall_total_processed = 0
+        overall_skipped_files = 0
         
-        for po_file_path in po_files:
-            _log(f"Processing {po_file_path}...", logger, spinner, 'info')
+        # Process each target language
+        for target_lang in target_languages:
+            _log(f"Processing target language: {target_lang}", logger, spinner, 'info')
             
-            # Read PO file
-            po_file = utils.read_po_file(po_file_path)
-            
-            # Check if this PO file should be translated based on language metadata matching target
-            if not utils.should_translate_po_file(po_file, _to):
-                po_language = utils.get_po_language(po_file)
-                target_short = utils.nllb_to_short_code(_to)
-                _log(f"Skipping {po_file_path} - language mismatch (PO language: {po_language or 'none'}, target: {target_short})", logger, spinner, 'info')
-                _log(f"Set Language metadata to '{target_short}' in PO file header to enable translation.", logger, spinner, 'info')
-                skipped_files += 1
+            # Find PO files in target language directories only
+            po_files = utils.glob_po_files_for_target_language(_directory, target_lang)
+            _l = len(po_files)
+            if _l == 0:
+                target_short = utils.nllb_to_short_code(target_lang)
+                _log(f"No PO files found in target language directories for {target_lang} (e.g., locale/{target_short}/, {target_short}/) in '{_directory}'.", logger, spinner, 'warning')
                 continue
+            _log(f"Found {_l} PO file{'s' if _l > 1 else ''} for {target_lang}.", logger, spinner, 'info')
             
-            # Extract entries based on force flag
-            if _force:
-                texts_to_translate = utils.extract_all_from_po(po_file)
-                mode_msg = "all entries (force mode)"
-            else:
-                texts_to_translate = utils.extract_untranslated_from_po(po_file)
-                mode_msg = "untranslated entries"
+            total_translated = 0
+            total_processed = 0
+            skipped_files = 0
             
-            if not texts_to_translate:
-                _log(f"No {mode_msg} in {po_file_path}.", logger, spinner, 'info')
-                continue
+            for po_file_path in po_files:
+                _log(f"Processing {po_file_path}...", logger, spinner, 'info')
                 
-            _log(f"Translating {len(texts_to_translate)} {mode_msg}...", logger, spinner, 'info')
+                # Read PO file
+                po_file = utils.read_po_file(po_file_path)
+                
+                # Check if this PO file should be translated based on language metadata matching target
+                if not utils.should_translate_po_file(po_file, target_lang):
+                    po_language = utils.get_po_language(po_file)
+                    target_short = utils.nllb_to_short_code(target_lang)
+                    _log(f"Skipping {po_file_path} - language mismatch (PO language: {po_language or 'none'}, target: {target_short})", logger, spinner, 'info')
+                    _log(f"Set Language metadata to '{target_short}' in PO file header to enable translation.", logger, spinner, 'info')
+                    skipped_files += 1
+                    continue
+                
+                # Extract entries based on force flag
+                if _force:
+                    texts_to_translate = utils.extract_all_from_po(po_file)
+                    mode_msg = "all entries (force mode)"
+                else:
+                    texts_to_translate = utils.extract_untranslated_from_po(po_file)
+                    mode_msg = "untranslated entries"
+                
+                if not texts_to_translate:
+                    _log(f"No {mode_msg} in {po_file_path}.", logger, spinner, 'info')
+                    continue
+                    
+                _log(f"Translating {len(texts_to_translate)} {mode_msg}...", logger, spinner, 'info')
+                
+                # Translate the texts
+                translations = translate_sentence(texts_to_translate, translator)
+                
+                # Create mapping of original text to translation
+                translation_dict = {}
+                for i, original in enumerate(texts_to_translate):
+                    if i < len(translations):
+                        translation_dict[original] = translations[i]
+                
+                # Update PO file with translations
+                utils.update_po_with_translations(po_file, translation_dict, force=_force)
+                
+                # Save the updated PO file
+                utils.save_po_file(po_file, po_file_path)
+                
+                total_translated += len(translation_dict)
+                total_processed += 1
+                _log(f"Updated {po_file_path} with {len(translation_dict)} translations.", logger, spinner, 'success')
             
-            # Translate the texts
-            translations = translate_sentence(texts_to_translate, translator)
+            # Add to overall totals
+            overall_total_translated += total_translated
+            overall_total_processed += total_processed
+            overall_skipped_files += skipped_files
             
-            # Create mapping of original text to translation
-            translation_dict = {}
-            for i, original in enumerate(texts_to_translate):
-                if i < len(translations):
-                    translation_dict[original] = translations[i]
-            
-            # Update PO file with translations
-            utils.update_po_with_translations(po_file, translation_dict, force=_force)
-            
-            # Save the updated PO file
-            utils.save_po_file(po_file, po_file_path)
-            
-            total_translated += len(translation_dict)
-            total_processed += 1
-            _log(f"Updated {po_file_path} with {len(translation_dict)} translations.", logger, spinner, 'success')
+            _log(f"Completed {target_lang}: Translated {total_translated} entries across {total_processed} PO file{'s' if total_processed != 1 else ''} (processed {total_processed}/{_l}, skipped {skipped_files}).", logger, spinner, 'success')
         
-        _log(f"Translation completed! Translated {total_translated} entries across {total_processed} PO file{'s' if total_processed != 1 else ''} (processed {total_processed}/{_l}, skipped {skipped_files}).", logger, spinner, 'success')
+        _log(f"Multi-language translation completed! Total: {overall_total_translated} entries across {overall_total_processed} PO files, {overall_skipped_files} files skipped.", logger, spinner, 'success')
         sys.exit(0)
     
     # Handle single PO file translation (when file path is passed as sentence)
@@ -466,6 +508,17 @@ def main():
         
         # Read PO file
         po_file = utils.read_po_file(po_file_path)
+        
+        # If no target language specified, detect from PO file metadata
+        if not _to:
+            po_language = utils.get_po_language(po_file)
+            if po_language:
+                _to = utils.normalize_language_code(po_language)
+                _log(f"Detected target language from PO file metadata: {_to}", logger, spinner, 'info')
+            else:
+                _log(f"Cannot determine target language - no Language metadata in {po_file_path}", logger, spinner, 'error')
+                _log("Set Language metadata in PO file header or specify target language explicitly.", logger, spinner, 'info')
+                sys.exit(1)
         
         # Check if this PO file should be translated based on language metadata matching target
         if not utils.should_translate_po_file(po_file, _to):

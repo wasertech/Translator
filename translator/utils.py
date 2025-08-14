@@ -370,3 +370,28 @@ def glob_po_files_for_target_language(directory, target_language, suffix=".po"):
                                 break
     
     return po_files
+
+def detect_target_languages_from_directory(directory):
+    """Detect all target languages available in the directory structure"""
+    target_languages = set()
+    
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith('.po') and not file.endswith('.tmp.po'):
+                file_path = os.path.join(root, file)
+                
+                # Check if this file has Language metadata
+                try:
+                    po_file = read_po_file(file_path)
+                    lang_metadata = po_file.metadata.get('Language', '').strip()
+                    
+                    if lang_metadata:
+                        # Convert short code to NLLB format if needed
+                        target_lang = normalize_language_code(lang_metadata)
+                        if target_lang != 'eng_Latn':  # Don't include source language
+                            target_languages.add(target_lang)
+                except Exception:
+                    # Skip files that can't be read
+                    continue
+    
+    return sorted(list(target_languages))
