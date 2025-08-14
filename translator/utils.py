@@ -1,4 +1,5 @@
 import time
+import os
 
 from pathlib import Path
 from glob import glob
@@ -73,29 +74,55 @@ def get_po_language(po_file):
     
     return None
 
-def should_translate_po_file(po_file, source_language="eng_Latn"):
-    """Determine if a PO file should be translated based on its language metadata"""
+def should_translate_po_file(po_file, target_language):
+    """Determine if a PO file should be translated based on its language metadata matching target language"""
     po_language = get_po_language(po_file)
     
-    # If no language is set, assume it's meant to be translated
+    # If no language is set, assume it should be translated ONLY if user explicitly sets Language metadata
     if not po_language:
+        return False  # Require explicit Language metadata for safety
+    
+    # Convert target language to short code for comparison
+    target_short = nllb_to_short_code(target_language)
+    
+    # Handle common language code variations - check if PO language matches target
+    po_lang_lower = po_language.lower()
+    target_short_lower = target_short.lower()
+    
+    # Direct match
+    if po_lang_lower == target_short_lower:
         return True
     
-    # Convert common language codes to NLLB format for comparison
-    source_lang_short = source_language.split('_')[0] if '_' in source_language else source_language
+    # Common variations
+    target_variations = {
+        'en': ['en', 'eng', 'english'],
+        'fr': ['fr', 'fra', 'french'],
+        'es': ['es', 'spa', 'spanish'],
+        'de': ['de', 'deu', 'german'],
+        'it': ['it', 'ita', 'italian'],
+        'pt': ['pt', 'por', 'portuguese'],
+        'ru': ['ru', 'rus', 'russian'],
+        'ja': ['ja', 'jpn', 'japanese'],
+        'ko': ['ko', 'kor', 'korean'],
+        'zh': ['zh', 'zho', 'chinese'],
+        'ar': ['ar', 'arb', 'arabic'],
+        'hi': ['hi', 'hin', 'hindi'],
+        'bn': ['bn', 'ben', 'bengali'],
+        'tr': ['tr', 'tur', 'turkish'],
+        'nl': ['nl', 'nld', 'dutch'],
+        'sv': ['sv', 'swe', 'swedish'],
+        'da': ['da', 'dan', 'danish'],
+        'no': ['no', 'nob', 'norwegian'],
+        'fi': ['fi', 'fin', 'finnish'],
+        'pl': ['pl', 'pol', 'polish'],
+    }
     
-    # Handle common language code variations
-    if po_language.lower() in ['en', 'eng', 'english']:
-        return source_lang_short.lower() in ['en', 'eng', 'english']
-    elif po_language.lower() in ['fr', 'fra', 'french']:
-        return source_lang_short.lower() in ['fr', 'fra', 'french']
-    elif po_language.lower() in ['es', 'spa', 'spanish']:
-        return source_lang_short.lower() in ['es', 'spa', 'spanish']
-    elif po_language.lower() in ['de', 'deu', 'german']:
-        return source_lang_short.lower() in ['de', 'deu', 'german']
+    # Check if PO language matches any variation of target language
+    for variations in target_variations.values():
+        if target_short_lower in variations and po_lang_lower in variations:
+            return True
     
-    # Default: check if the language matches the source
-    return po_language.lower() == source_lang_short.lower()
+    return False
 
 def update_po_with_translations(po_file, translations_dict, force=False):
     """Update PO file entries with translations"""
@@ -113,3 +140,233 @@ def update_po_with_translations(po_file, translations_dict, force=False):
 def save_po_file(po_file, filepath):
     """Save PO file to specified path"""
     po_file.save(filepath)
+
+def normalize_language_code(lang_code):
+    """Convert short language codes to NLLB format and vice versa"""
+    if not lang_code:
+        return lang_code
+        
+    # Common mappings from short codes to NLLB codes
+    short_to_nllb = {
+        'en': 'eng_Latn',
+        'fr': 'fra_Latn', 
+        'es': 'spa_Latn',
+        'de': 'deu_Latn',
+        'it': 'ita_Latn',
+        'pt': 'por_Latn',
+        'ru': 'rus_Cyrl',
+        'ja': 'jpn_Jpan',
+        'ko': 'kor_Hang',
+        'zh': 'zho_Hans',
+        'ar': 'arb_Arab',
+        'hi': 'hin_Deva',
+        'bn': 'ben_Beng',
+        'tr': 'tur_Latn',
+        'nl': 'nld_Latn',
+        'sv': 'swe_Latn',
+        'da': 'dan_Latn',
+        'no': 'nob_Latn',
+        'fi': 'fin_Latn',
+        'pl': 'pol_Latn',
+        'cs': 'ces_Latn',
+        'hu': 'hun_Latn',
+        'ro': 'ron_Latn',
+        'uk': 'ukr_Cyrl',
+        'bg': 'bul_Cyrl',
+        'hr': 'hrv_Latn',
+        'sk': 'slk_Latn',
+        'sl': 'slv_Latn',
+        'et': 'est_Latn',
+        'lv': 'lvs_Latn',
+        'lt': 'lit_Latn',
+        'mt': 'mlt_Latn',
+        'el': 'ell_Grek',
+        'cy': 'cym_Latn',
+        'ga': 'gle_Latn',
+        'eu': 'eus_Latn',
+        'ca': 'cat_Latn',
+        'gl': 'glg_Latn',
+        'is': 'isl_Latn',
+        'mk': 'mkd_Cyrl',
+        'sq': 'als_Latn',
+        'be': 'bel_Cyrl',
+        'ka': 'kat_Geor',
+        'hy': 'hye_Armn',
+        'az': 'azj_Latn',
+        'kk': 'kaz_Cyrl',
+        'ky': 'kir_Cyrl',
+        'uz': 'uzn_Latn',
+        'tk': 'tuk_Latn',
+        'mn': 'khk_Cyrl',
+        'th': 'tha_Thai',
+        'vi': 'vie_Latn',
+        'id': 'ind_Latn',
+        'ms': 'zsm_Latn',
+        'tl': 'tgl_Latn',
+        'my': 'mya_Mymr',
+        'km': 'khm_Khmr',
+        'lo': 'lao_Laoo',
+        'am': 'amh_Ethi',
+        'ti': 'tir_Ethi',
+        'or': 'ory_Orya',
+        'as': 'asm_Beng',
+        'ur': 'urd_Arab',
+        'fa': 'pes_Arab',
+        'ps': 'pbt_Arab',
+        'sd': 'snd_Arab',
+        'ne': 'npi_Deva',
+        'si': 'sin_Sinh',
+        'ta': 'tam_Taml',
+        'te': 'tel_Telu',
+        'kn': 'kan_Knda',
+        'ml': 'mal_Mlym',
+        'gu': 'guj_Gujr',
+        'pa': 'pan_Guru',
+        'mr': 'mar_Deva',
+        'sa': 'san_Deva',
+        'sw': 'swh_Latn',
+        'yo': 'yor_Latn',
+        'ig': 'ibo_Latn',
+        'ha': 'hau_Latn',
+        'zu': 'zul_Latn',
+        'xh': 'xho_Latn',
+        'af': 'afr_Latn',
+        'he': 'heb_Hebr',
+        'yi': 'ydd_Hebr',
+    }
+    
+    # If it's a short code, convert to NLLB
+    if lang_code.lower() in short_to_nllb:
+        return short_to_nllb[lang_code.lower()]
+    
+    # If it's already an NLLB code, return as is
+    if '_' in lang_code and len(lang_code) > 3:
+        return lang_code
+        
+    # Return as is if no mapping found
+    return lang_code
+
+def nllb_to_short_code(nllb_code):
+    """Convert NLLB language code to short code for directory matching"""
+    short_to_nllb = {
+        'en': 'eng_Latn',
+        'fr': 'fra_Latn', 
+        'es': 'spa_Latn',
+        'de': 'deu_Latn',
+        'it': 'ita_Latn',
+        'pt': 'por_Latn',
+        'ru': 'rus_Cyrl',
+        'ja': 'jpn_Jpan',
+        'ko': 'kor_Hang',
+        'zh': 'zho_Hans',
+        'ar': 'arb_Arab',
+        'hi': 'hin_Deva',
+        'bn': 'ben_Beng',
+        'tr': 'tur_Latn',
+        'nl': 'nld_Latn',
+        'sv': 'swe_Latn',
+        'da': 'dan_Latn',
+        'no': 'nob_Latn',
+        'fi': 'fin_Latn',
+        'pl': 'pol_Latn',
+        'cs': 'ces_Latn',
+        'hu': 'hun_Latn',
+        'ro': 'ron_Latn',
+        'uk': 'ukr_Cyrl',
+        'bg': 'bul_Cyrl',
+        'hr': 'hrv_Latn',
+        'sk': 'slk_Latn',
+        'sl': 'slv_Latn',
+        'et': 'est_Latn',
+        'lv': 'lvs_Latn',
+        'lt': 'lit_Latn',
+        'mt': 'mlt_Latn',
+        'el': 'ell_Grek',
+        'cy': 'cym_Latn',
+        'ga': 'gle_Latn',
+        'eu': 'eus_Latn',
+        'ca': 'cat_Latn',
+        'gl': 'glg_Latn',
+        'is': 'isl_Latn',
+        'mk': 'mkd_Cyrl',
+        'sq': 'als_Latn',
+        'be': 'bel_Cyrl',
+        'ka': 'kat_Geor',
+        'hy': 'hye_Armn',
+        'az': 'azj_Latn',
+        'kk': 'kaz_Cyrl',
+        'ky': 'kir_Cyrl',
+        'uz': 'uzn_Latn',
+        'tk': 'tuk_Latn',
+        'mn': 'khk_Cyrl',
+        'th': 'tha_Thai',
+        'vi': 'vie_Latn',
+        'id': 'ind_Latn',
+        'ms': 'zsm_Latn',
+        'tl': 'tgl_Latn',
+        'my': 'mya_Mymr',
+        'km': 'khm_Khmr',
+        'lo': 'lao_Laoo',
+        'am': 'amh_Ethi',
+        'ti': 'tir_Ethi',
+        'or': 'ory_Orya',
+        'as': 'asm_Beng',
+        'ur': 'urd_Arab',
+        'fa': 'pes_Arab',
+        'ps': 'pbt_Arab',
+        'sd': 'snd_Arab',
+        'ne': 'npi_Deva',
+        'si': 'sin_Sinh',
+        'ta': 'tam_Taml',
+        'te': 'tel_Telu',
+        'kn': 'kan_Knda',
+        'ml': 'mal_Mlym',
+        'gu': 'guj_Gujr',
+        'pa': 'pan_Guru',
+        'mr': 'mar_Deva',
+        'sa': 'san_Deva',
+        'sw': 'swh_Latn',
+        'yo': 'yor_Latn',
+        'ig': 'ibo_Latn',
+        'ha': 'hau_Latn',
+        'zu': 'zul_Latn',
+        'xh': 'xho_Latn',
+        'af': 'afr_Latn',
+        'he': 'heb_Hebr',
+        'yi': 'ydd_Hebr',
+    }
+    
+    # Create reverse mapping
+    nllb_to_short = {v: k for k, v in short_to_nllb.items()}
+    
+    return nllb_to_short.get(nllb_code, nllb_code.split('_')[0] if '_' in nllb_code else nllb_code)
+
+def glob_po_files_for_target_language(directory, target_language, suffix=".po"):
+    """Get PO files from target language directories only"""
+    po_files = []
+    
+    # Convert target language to short code for directory matching
+    target_short = nllb_to_short_code(target_language)
+    
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith(suffix) and not file.endswith(f".tmp{suffix}"):
+                file_path = os.path.join(root, file)
+                
+                # Check if this file is in a target language directory
+                rel_path = os.path.relpath(file_path, directory)
+                path_parts = rel_path.split(os.sep)
+                
+                # Check if any part of the path matches our target language
+                for part in path_parts:
+                    if part == target_short:
+                        po_files.append(file_path)
+                        break
+                    # Also check for exact matches like "locale/fr" pattern
+                    if len(path_parts) >= 2:
+                        for i in range(len(path_parts) - 1):
+                            if path_parts[i] == "locale" and path_parts[i + 1] == target_short:
+                                po_files.append(file_path)
+                                break
+    
+    return po_files

@@ -171,29 +171,36 @@ Translate a single PO file:
 ### Advanced Features
 
 #### Language-Aware Translation
-The `--po` flag includes smart language detection that reads Language metadata from PO files. This prevents accidentally translating all language files in a multi-language project:
+The `--po` flag includes smart target language detection that looks for PO files in target language directories and validates Language metadata. This ensures you only translate the intended target language files:
 
 ```zsh
 # In a Django project with locale/en/, locale/fr/, locale/es/ directories
 ❯ translate --po --directory . eng_Latn fra_Latn
-# Only translates English PO files (Language: en), skips French and Spanish files
+# Finds and translates PO files in locale/fr/ directories with Language: fr metadata
+
+# Short form (defaults source to English)
+❯ translate --po --directory . fr
+# Equivalent to above - finds French target files and translates from English
 ```
 
 #### Force Translation Mode
-Use `--force` to retranslate all entries, including already translated ones:
+Use `--force` to retranslate all entries in PO files or ignore cache for text files:
 
 ```zsh
+# For PO files: translate ALL entries, not just empty msgstr fields
 ❯ translate --po --force --directory locales eng_Latn deu_Latn
-# Translates ALL entries, not just empty msgstr fields
+
+# For text files: ignore cache and retranslate everything from scratch
+❯ translate --force --directory texts --save output.txt eng_Latn fra_Latn
 ```
 
 ### Key Features
 
 The `--po` mode:
 - **Preserves Structure**: Maintains all PO file metadata, comments, and formatting
-- **Language Detection**: Reads Language metadata to determine which files to translate
+- **Target Language Detection**: Finds PO files in target language directories and validates Language metadata
 - **Selective Translation**: Only translates untranslated entries by default (empty `msgstr` fields)  
-- **Multi-Language Safety**: Skips files that don't match the source language
+- **Multi-Language Safety**: Only processes files in target language directories with matching metadata
 - **Recursive Processing**: Finds all `.po` files in nested directory structures
 - **Batch Optimization**: Uses Translator's optimized algorithms for efficiency
 
