@@ -25,9 +25,15 @@ try:
 except RuntimeError:
     pass
 
-default_translator_model = "facebook/nllb-200-distilled-600M"
+# default_translator_model = "facebook/nllb-200-distilled-600M"
+default_translator_model = "alirezamsh/small100" # only 333M parameters, but fast and good enough for most languages
 default_translator_pipeline = "translation"
 max_translation_lenght = 500
+
+please_wait_disclamer = """
+[Loading...] If this is the first time you load a particular model, it may take a while depending on your hardware, your internet connection and the model size.
+"""
+please_wait_short = "Please be patient."
 
 def parse_arguments():
     argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another], [any SENTENCE you would like].")
@@ -89,8 +95,9 @@ def print_version(version, prefix="Translator version:", _from="eng_Latn", _to=g
             _log("Preparing to translate...", logger, spinner, 'info')
                 
             if is_interactive and spinner:
+                _log(please_wait_disclamer, logger, spinner, 'info')
                 spinner.start()
-                spinner.text = "Please be patient."
+                spinner.text = please_wait_short
 
             translator = Translator(_from, _to, max_length, model_id, pipeline, batch_size=batch_size, n_proc=nproc)
             
@@ -265,8 +272,9 @@ def main():
                 _log("Preparing to translate...", logger, spinner, 'info')
                 
                 if is_interactive and spinner:
+                    _log(please_wait_disclamer, logger, spinner, 'info')
                     spinner.start()
-                    spinner.text = "Please be patient."
+                    spinner.text = please_wait_short
 
                 translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline, batch_size=batch_size, n_proc=nproc)
                 
@@ -388,8 +396,9 @@ def main():
 
     _log("Preparing to translate...", logger, spinner, 'info')
     if is_interactive and spinner:
+        _log(please_wait_disclamer, logger, spinner, 'info')
         spinner.start()
-        spinner.text = "Please be patient."
+        spinner.text = please_wait_short
 
     translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline, batch_size=batch_size, n_proc=nproc)
 

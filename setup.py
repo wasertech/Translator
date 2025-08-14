@@ -19,6 +19,7 @@ setup(
     python_requires='>=3.8,<4',
     install_requires = [
         'transformers>=4.53.0',
+        'sentencepiece>=0.1.99',
         'langcodes>=3.3.0',
         'datasets>=2.13.1',
         'halo>=0.0.31',
