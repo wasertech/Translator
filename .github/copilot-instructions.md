@@ -1,0 +1,1 @@
+This is my translator project. It's role is to provide a Python package for language translation using translation models available in the Hugging Face Transformers library for efficient and effective mass batch translation of files and text.
