@@ -25,8 +25,7 @@ try:
 except RuntimeError:
     pass
 
-# default_translator_model = "facebook/nllb-200-distilled-600M"
-default_translator_model = "alirezamsh/small100" # only 333M parameters, but fast and good enough for most languages
+default_translator_model = "facebook/nllb-200-distilled-600M"
 default_translator_pipeline = "translation"
 max_translation_lenght = 500
 

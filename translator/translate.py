@@ -31,8 +31,7 @@ class Translator:
             src_lang=source_language,
             tgt_lang=target_language,
             max_length=max_length,
-            device=self.device,
-            #device_map="auto",
+            # device=self.device,
         )
         self.logger.debug("Translator has been successfully loaded.")
 
