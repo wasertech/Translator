@@ -22,7 +22,7 @@
 Translate whatever sentence you want.
 ```
 
-Uses Meta's NLLB model [`facebook/nllb-200-distilled-600M`](https://huggingface.co/facebook/nllb-200-distilled-600M) by default. You can change it by passing a custom flag `--model_id`. Checkout the [Show & Tell discussions](https://github.com/wasertech/Translator/discussions/categories/show-and-tell) to see popular models and share yours.
+Uses Meta's NLLB model [`facebook/nllb-200-distilled-600M`](https://huggingface.co/facebook/nllb-200-distilled-600M) by default. You can change it by passing a custom flag `--model_id`. Checkout the [Show & Tell discussions](https://github.com/wasertech/Translator/discussions/categories/show-and-tell) to see popular models and share your favorites.
 
 ## Installation
 
