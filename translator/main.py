@@ -29,6 +29,11 @@ default_translator_model = "facebook/nllb-200-distilled-600M"
 default_translator_pipeline = "translation"
 max_translation_lenght = 500
 
+please_wait_disclamer = """
+[Loading...] If this is the first time you load a particular model, it may take a while depending on your hardware, your internet connection and the model size.
+"""
+please_wait_short = "Please be patient."
+
 def parse_arguments():
     argument_parse = ArgumentParser(description="Translate [FROM one language] [TO another], [any SENTENCE you would like].")
     argument_parse.add_argument('-v', '--version', action='store_true', help="shows the current version of translator")
@@ -36,6 +41,8 @@ def parse_arguments():
     argument_parse.add_argument('_to', nargs='?', default=[], help="Target language to translate towards.")
     argument_parse.add_argument('sentences', nargs="*", default=[], help="Sentences to translate.")
     argument_parse.add_argument('-d', '--directory', type=str, help="Path to directory to translate in batch instead of unique sentence.")
+    argument_parse.add_argument('--po', action='store_true', help="Translate PO (Portable Object) files instead of text files.")
+    argument_parse.add_argument('--force', action='store_true', help="Force translation ignoring cache (text files) or translate all entries including translated ones (PO files).")
     argument_parse.add_argument('-S', '--save', type=str, help="Path to text file to save translations.")
     argument_parse.add_argument('-l', '--max_length', default=max_translation_lenght, help="Max length of output.")
     argument_parse.add_argument('-m', '--model_id', default=default_translator_model, help="HuggingFace model ID to use.")
@@ -87,8 +94,9 @@ def print_version(version, prefix="Translator version:", _from="eng_Latn", _to=g
             _log("Preparing to translate...", logger, spinner, 'info')
                 
             if is_interactive and spinner:
+                _log(please_wait_disclamer, logger, spinner, 'info')
                 spinner.start()
-                spinner.text = "Please be patient."
+                spinner.text = please_wait_short
 
             translator = Translator(_from, _to, max_length, model_id, pipeline, batch_size=batch_size, n_proc=nproc)
             
@@ -180,7 +188,34 @@ def main():
         sys.exit(0)
 
     _from, _to, _sentences = "".join(args._from), "".join(args._to), args.sentences
-    _directory, _save_path = args.directory, args.save
+    _directory, _save_path, _po_mode, _force = args.directory, args.save, args.po, args.force
+
+    # Validate conflicting flags
+    if _po_mode and _save_path:
+        _log("Error: --po and --save flags cannot be used together. PO files are translated in-place.", logger, spinner, 'error')
+        sys.exit(1)
+    
+    if _po_mode and not _directory:
+        _log("Error: --po flag requires --directory to be specified.", logger, spinner, 'error')
+        sys.exit(1)
+
+    # Handle PO mode - determine source and target languages
+    if _po_mode:
+        if not _from and not _to:
+            # Multi-language mode: translate all available target languages
+            _from = "eng_Latn"  # Default source language
+            _log(f"PO mode: Multi-language translation enabled. Source: {_from}, detecting all target languages.", logger, spinner, 'info')
+        elif _to and not _from:
+            # Single target language mode with default source
+            _from = "eng_Latn"  # Default source language for PO translation
+            _log(f"PO mode: Defaulting source language to {_from}", logger, spinner, 'info')
+    
+    # Normalize language codes (allow short codes like 'fr' to be converted to 'fra_Latn')
+    if _po_mode:
+        if _from:
+            _from = utils.normalize_language_code(_from)
+        if _to:
+            _to = utils.normalize_language_code(_to)
 
     nepoch, nproc, batch_size = args.nepoch, args.nproc, args.batch_size
 
@@ -236,8 +271,9 @@ def main():
                 _log("Preparing to translate...", logger, spinner, 'info')
                 
                 if is_interactive and spinner:
+                    _log(please_wait_disclamer, logger, spinner, 'info')
                     spinner.start()
-                    spinner.text = "Please be patient."
+                    spinner.text = please_wait_short
 
                 translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline, batch_size=batch_size, n_proc=nproc)
                 
@@ -359,8 +395,9 @@ def main():
 
     _log("Preparing to translate...", logger, spinner, 'info')
     if is_interactive and spinner:
+        _log(please_wait_disclamer, logger, spinner, 'info')
         spinner.start()
-        spinner.text = "Please be patient."
+        spinner.text = please_wait_short
 
     translator = Translator(_from, _to, args.max_length, args.model_id, args.pipeline, batch_size=batch_size, n_proc=nproc)
 
@@ -371,9 +408,169 @@ def main():
         spinner.text = ""
         spinner.stop()
 
+    # Handle PO file translation
+    if _po_mode and _directory and Path(_directory).exists():
+        _log("PO file translation mode enabled.", logger, spinner, 'info')
+        
+        # Determine target languages to translate
+        if _to:
+            # Single target language mode
+            target_languages = [_to]
+            _log(f"Looking for PO files in target language directories for '{_to}' in directory '{_directory}'.", logger, spinner, 'info')
+        else:
+            # Multi-language mode: detect all target languages
+            target_languages = utils.detect_target_languages_from_directory(_directory)
+            if not target_languages:
+                _log("No target languages found with Language metadata set in PO files.", logger, spinner, 'error')
+                _log("Set the Language metadata in your PO files to enable auto-translation (e.g., Language: fr).", logger, spinner, 'info')
+                sys.exit(1)
+            _log(f"Multi-language mode: Found {len(target_languages)} target languages: {', '.join(target_languages)}", logger, spinner, 'info')
+        
+        overall_total_translated = 0
+        overall_total_processed = 0
+        overall_skipped_files = 0
+        
+        # Process each target language
+        for target_lang in target_languages:
+            _log(f"Processing target language: {target_lang}", logger, spinner, 'info')
+            
+            # Find PO files in target language directories only
+            po_files = utils.glob_po_files_for_target_language(_directory, target_lang)
+            _l = len(po_files)
+            if _l == 0:
+                target_short = utils.nllb_to_short_code(target_lang)
+                _log(f"No PO files found in target language directories for {target_lang} (e.g., locale/{target_short}/, {target_short}/) in '{_directory}'.", logger, spinner, 'warning')
+                continue
+            _log(f"Found {_l} PO file{'s' if _l > 1 else ''} for {target_lang}.", logger, spinner, 'info')
+            
+            total_translated = 0
+            total_processed = 0
+            skipped_files = 0
+            
+            for po_file_path in po_files:
+                _log(f"Processing {po_file_path}...", logger, spinner, 'info')
+                
+                # Read PO file
+                po_file = utils.read_po_file(po_file_path)
+                
+                # Check if this PO file should be translated based on language metadata matching target
+                if not utils.should_translate_po_file(po_file, target_lang):
+                    po_language = utils.get_po_language(po_file)
+                    target_short = utils.nllb_to_short_code(target_lang)
+                    _log(f"Skipping {po_file_path} - language mismatch (PO language: {po_language or 'none'}, target: {target_short})", logger, spinner, 'info')
+                    _log(f"Set Language metadata to '{target_short}' in PO file header to enable translation.", logger, spinner, 'info')
+                    skipped_files += 1
+                    continue
+                
+                # Extract entries based on force flag
+                if _force:
+                    texts_to_translate = utils.extract_all_from_po(po_file)
+                    mode_msg = "all entries (force mode)"
+                else:
+                    texts_to_translate = utils.extract_untranslated_from_po(po_file)
+                    mode_msg = "untranslated entries"
+                
+                if not texts_to_translate:
+                    _log(f"No {mode_msg} in {po_file_path}.", logger, spinner, 'info')
+                    continue
+                    
+                _log(f"Translating {len(texts_to_translate)} {mode_msg}...", logger, spinner, 'info')
+                
+                # Translate the texts
+                translations = translate_sentence(texts_to_translate, translator)
+                
+                # Create mapping of original text to translation
+                translation_dict = {}
+                for i, original in enumerate(texts_to_translate):
+                    if i < len(translations):
+                        translation_dict[original] = translations[i]
+                
+                # Update PO file with translations
+                utils.update_po_with_translations(po_file, translation_dict, force=_force)
+                
+                # Save the updated PO file
+                utils.save_po_file(po_file, po_file_path)
+                
+                total_translated += len(translation_dict)
+                total_processed += 1
+                _log(f"Updated {po_file_path} with {len(translation_dict)} translations.", logger, spinner, 'success')
+            
+            # Add to overall totals
+            overall_total_translated += total_translated
+            overall_total_processed += total_processed
+            overall_skipped_files += skipped_files
+            
+            _log(f"Completed {target_lang}: Translated {total_translated} entries across {total_processed} PO file{'s' if total_processed != 1 else ''} (processed {total_processed}/{_l}, skipped {skipped_files}).", logger, spinner, 'success')
+        
+        _log(f"Multi-language translation completed! Total: {overall_total_translated} entries across {overall_total_processed} PO files, {overall_skipped_files} files skipped.", logger, spinner, 'success')
+        sys.exit(0)
+    
+    # Handle single PO file translation (when file path is passed as sentence)
+    if _po_mode and _sentences and len(_sentences) == 1 and _sentences[0].endswith('.po'):
+        po_file_path = _sentences[0]
+        if not Path(po_file_path).exists():
+            _log(f"PO file not found: {po_file_path}", logger, spinner, 'error')
+            sys.exit(1)
+            
+        _log(f"Translating single PO file: {po_file_path}", logger, spinner, 'info')
+        
+        # Read PO file
+        po_file = utils.read_po_file(po_file_path)
+        
+        # If no target language specified, detect from PO file metadata
+        if not _to:
+            po_language = utils.get_po_language(po_file)
+            if po_language:
+                _to = utils.normalize_language_code(po_language)
+                _log(f"Detected target language from PO file metadata: {_to}", logger, spinner, 'info')
+            else:
+                _log(f"Cannot determine target language - no Language metadata in {po_file_path}", logger, spinner, 'error')
+                _log("Set Language metadata in PO file header or specify target language explicitly.", logger, spinner, 'info')
+                sys.exit(1)
+        
+        # Check if this PO file should be translated based on language metadata matching target
+        if not utils.should_translate_po_file(po_file, _to):
+            po_language = utils.get_po_language(po_file)
+            target_short = utils.nllb_to_short_code(_to)
+            _log(f"Cannot translate {po_file_path} - language mismatch (PO language: {po_language or 'none'}, target: {target_short})", logger, spinner, 'error')
+            _log(f"Set Language metadata to '{target_short}' in PO file header to enable translation.", logger, spinner, 'info')
+            sys.exit(1)
+        
+        # Extract entries based on force flag
+        if _force:
+            texts_to_translate = utils.extract_all_from_po(po_file)
+            mode_msg = "all entries (force mode)"
+        else:
+            texts_to_translate = utils.extract_untranslated_from_po(po_file)
+            mode_msg = "untranslated entries"
+        
+        if not texts_to_translate:
+            _log(f"No {mode_msg} in {po_file_path}.", logger, spinner, 'info')
+            sys.exit(0)
+            
+        _log(f"Translating {len(texts_to_translate)} {mode_msg}...", logger, spinner, 'info')
+        
+        # Translate the texts
+        translations = translate_sentence(texts_to_translate, translator)
+        
+        # Create mapping of original text to translation
+        translation_dict = {}
+        for i, original in enumerate(texts_to_translate):
+            if i < len(translations):
+                translation_dict[original] = translations[i]
+        
+        # Update PO file with translations
+        utils.update_po_with_translations(po_file, translation_dict, force=_force)
+        
+        # Save the updated PO file
+        utils.save_po_file(po_file, po_file_path)
+        
+        _log(f"Translation completed! Updated {po_file_path} with {len(translation_dict)} translations.", logger, spinner, 'success')
+        sys.exit(0)
+
     if _directory and Path(_directory).exists():
         _log("No sentence was given but directory was provided.", logger, spinner, 'info')
-        _log(f"Translate sentences in {_from} to {_to} from text files in directory \'{_directory}\' by batches of size {batch_size}.", logger, spinner, 'info')
+        _log(f"Translate sentences in {_from} to {_to} from {'PO' if _po_mode else 'text'} files in directory \'{_directory}\' by batches of size {batch_size}.", logger, spinner, 'info')
         source_path = _directory
         if not _save_path:
             _log("Translating sentences from directory without passing --save argument is forbbiden.", logger, spinner, 'error')
@@ -422,41 +619,47 @@ def main():
             _log(f"Translating {_ds:n} sentences...", logger, spinner, 'info')
             if is_interactive and spinner: spinner.start()
             
-            # Load already translated data if any
+            # Load already translated data if any (skip if force mode is enabled)
             time_before_1 = time.perf_counter()
-            _log("Loading translated sentences...", logger, spinner, 'info')
-            if is_interactive and spinner: spinner.stop()
-            if Path(translated_input_path).exists() and Path(translated_input_path).is_file() and Path(output_path).exists() and Path(output_path).is_file():
-                mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-                translated_dataset = load_dataset('text', data_files=translated_data_files, split="translated", cache_dir=cache)
-                mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-                _log(f"RAM memory used by translated dataset: {(mem_after - mem_before):n} MB", logger, spinner, 'debug')
-                been_translated = translated_dataset.unique('text')
-                _t_ds = len(been_translated)
-                _translated += been_translated
-                _log(f"Translated {_t_ds:n} sentences already.", logger, spinner, 'info')
-                
-                mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-                translation_dataset = load_dataset('text', data_files=translation_data_files, split="translation", cache_dir=cache)
-                mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-                _log(f"RAM memory used by translation dataset: {(mem_after - mem_before):n} MB", logger, spinner, 'debug')
-                translations += translation_dataset.unique('text')
-                if is_interactive and spinner: spinner.start()
-            else:
+            if _force:
+                _log("Force mode enabled - ignoring cache and retranslating all sentences.", logger, spinner, 'info')
                 _t_ds = 0
-                _log("Not translated any sentences yet.", logger, spinner, 'info')
-                if is_interactive and spinner: spinner.start()
+            else:
+                _log("Loading translated sentences...", logger, spinner, 'info')
+                if is_interactive and spinner: spinner.stop()
+                if Path(translated_input_path).exists() and Path(translated_input_path).is_file() and Path(output_path).exists() and Path(output_path).is_file():
+                    mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                    translated_dataset = load_dataset('text', data_files=translated_data_files, split="translated", cache_dir=cache)
+                    mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                    _log(f"RAM memory used by translated dataset: {(mem_after - mem_before):n} MB", logger, spinner, 'debug')
+                    been_translated = translated_dataset.unique('text')
+                    _t_ds = len(been_translated)
+                    _translated += been_translated
+                    _log(f"Translated {_t_ds:n} sentences already.", logger, spinner, 'info')
+                    
+                    mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                    translation_dataset = load_dataset('text', data_files=translation_data_files, split="translation", cache_dir=cache)
+                    mem_after = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                    _log(f"RAM memory used by translation dataset: {(mem_after - mem_before):n} MB", logger, spinner, 'debug')
+                    translations += translation_dataset.unique('text')
+                    if is_interactive and spinner: spinner.start()
+                else:
+                    _t_ds = 0
+                    _log("Not translated any sentences yet.", logger, spinner, 'info')
+                    if is_interactive and spinner: spinner.start()
             time_after_1 = time.perf_counter()
             _td_1 = time_after_1 - time_before_1
             _log(f"Took {timedelta(seconds=_td_1)} second(s) to load {_t_ds:n} translated sentence(s).", logger, spinner, 'debug')
             if is_interactive and spinner: spinner.start()
 
-            # Filter translated data from all data to get untranslated data
+            # Filter translated data from all data to get untranslated data (skip if force mode)
             time_before_2 = time.perf_counter()
             if is_interactive and spinner: spinner.stop()
             mem_before = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
-            if not _translated:
+            if _force or not _translated:
                 untranslated_dataset = translate_dataset
+                if _force:
+                    _log("Force mode: Translating all sentences regardless of cache...", logger, spinner, 'info')
             else:
                 _log("Filtering untranslated sentences...", logger, spinner, 'info')
 
