@@ -20,6 +20,7 @@ setup(
     install_requires = [
         'transformers>=4.53.0',
         'sentencepiece>=0.1.99',
+        'bitsandbytes>=0.40.2',
         'langcodes>=3.3.0',
         'datasets>=2.13.1',
         'halo>=0.0.31',

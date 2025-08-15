@@ -2,7 +2,9 @@ import os
 from langcodes import closest_supported_match
 from langcodes.tag_parser import LanguageTagError
 
-_LANGS = [ 
+from translator import utils
+
+_NLLB_LANGS = [ 
         "ace_Arab", "ace_Latn", "acm_Arab", "acq_Arab", "aeb_Arab", "afr_Latn", "ajp_Arab", "aka_Latn", "amh_Ethi", "apc_Arab", "arb_Arab",
         "ars_Arab", "ary_Arab", "arz_Arab", "asm_Beng", "ast_Latn", "awa_Deva", "ayr_Latn", "azb_Arab", "azj_Latn", "bak_Cyrl", "bam_Latn",
         "ban_Latn", "bel_Cyrl", "bem_Latn", "ben_Beng", "bho_Deva", "bjn_Arab", "bjn_Latn", "bod_Tibt", "bos_Latn", "bug_Latn", "bul_Cyrl",
@@ -24,15 +26,146 @@ _LANGS = [
         "yue_Hant", "zho_Hans", "zho_Hant", "zul_Latn"
     ]
 
+_M2M_LANGS = [
+    "Afrikaans (af)",
+    "Amharic (am)",
+    "Arabic (ar)",
+    "Asturian (ast)",
+    "Azerbaijani (az)",
+    "Bashkir (ba)",
+    "Belarusian (be)",
+    "Bulgarian (bg)",
+    "Bengali (bn)",
+    "Breton (br)",
+    "Bosnian (bs)",
+    "Catalan; Valencian (ca)",
+    "Cebuano (ceb)",
+    "Czech (cs)",
+    "Welsh (cy)",
+    "Danish (da)",
+    "German (de)",
+    "Greeek (el)",
+    "English (en)",
+    "Spanish (es)",
+    "Estonian (et)",
+    "Persian (fa)",
+    "Fulah (ff)",
+    "Finnish (fi)",
+    "French (fr)",
+    "Western Frisian (fy)",
+    "Irish (ga)",
+    "Gaelic; Scottish Gaelic (gd)",
+    "Galician (gl)",
+    "Gujarati (gu)",
+    "Hausa (ha)",
+    "Hebrew (he)",
+    "Hindi (hi)",
+    "Croatian (hr)",
+    "Haitian; Haitian Creole (ht)",
+    "Hungarian (hu)",
+    "Armenian (hy)",
+    "Indonesian (id)",
+    "Igbo (ig)",
+    "Iloko (ilo)",
+    "Icelandic (is)",
+    "Italian (it)",
+    "Japanese (ja)",
+    "Javanese (jv)",
+    "Georgian (ka)",
+    "Kazakh (kk)",
+    "Central Khmer (km)",
+    "Kannada (kn)",
+    "Korean (ko)",
+    "Luxembourgish; Letzeburgesch (lb)",
+    "Ganda (lg)",
+    "Lingala (ln)",
+    "Lao (lo)",
+    "Lithuanian (lt)",
+    "Latvian (lv)",
+    "Malagasy (mg)",
+    "Macedonian (mk)",
+    "Malayalam (ml)",
+    "Mongolian (mn)",
+    "Marathi (mr)",
+    "Malay (ms)",
+    "Burmese (my)",
+    "Nepali (ne)",
+    "Dutch; Flemish (nl)",
+    "Norwegian (no)",
+    "Northern Sotho (ns)",
+    "Occitan [post 1500] (oc)",
+    "Oriya (or)",
+    "Panjabi; Punjabi (pa)",
+    "Polish (pl)",
+    "Pushto; Pashto (ps)",
+    "Portuguese (pt)",
+    "Romanian; Moldavian; Moldovan (ro)",
+    "Russian (ru)",
+    "Sindhi (sd)",
+    "Sinhala; Sinhalese (si)",
+    "Slovak (sk)",
+    "Slovenian (sl)",
+    "Somali (so)",
+    "Albanian (sq)",
+    "Serbian (sr)",
+    "Swati (ss)",
+    "Sundanese (su)",
+    "Swedish (sv)",
+    "Swahili (sw)",
+    "Tamil (ta)",
+    "Thai (th)",
+    "Tagalog (tl)",
+    "Tswana (tn)",
+    "Turkish (tr)",
+    "Ukrainian (uk)",
+    "Urdu (ur)",
+    "Uzbek (uz)",
+    "Vietnamese (vi)",
+    "Wolof (wo)",
+    "Xhosa (xh)",
+    "Yiddish (yi)",
+    "Yoruba (yo)",
+    "Chinese (zh)",
+    "Zulu (zu)"
+]
+
+_M2M_LANGS = {
+    lang.split(" (")[1].split(")")[0].strip().lower(): lang.split(" (")[0].strip()
+    for lang in _M2M_LANGS
+}
+
 def get_nllb_lang(lang = None):
     if not lang:
-        return _LANGS
+        return _NLLB_LANGS
     else:
         try:
-            return closest_supported_match(lang, _LANGS)
+            return closest_supported_match(lang, _NLLB_LANGS)
+        except LanguageTagError as lte:
+            return lang
+
+def get_m2m_lang(lang = None):
+    if not lang:
+        return _M2M_LANGS
+    else:
+        try:
+            return closest_supported_match(lang, _M2M_LANGS)
         except LanguageTagError as lte:
             return lang
 
 def get_sys_lang_format():
     i18n = os.environ.get('LANG', "en_EN.UTF-8").split(".")[0]
-    return get_nllb_lang(i18n)
+    # return get_nllb_lang(i18n)
+    return i18n.split("_")[0].lower() if "_" in i18n else i18n.lower()
+
+def get_lang_from_code(code):
+    """
+    Get the language name from the code.
+    :param code: The language code.
+    :return: The language name.
+    """
+    if code in _NLLB_LANGS:
+        return code.split("_")[0].lower()
+    elif code in _M2M_LANGS:
+        return _M2M_LANGS[code]
+    else:
+        return closest_supported_match(code, _NLLB_LANGS + list(_M2M_LANGS.keys()), default=code)

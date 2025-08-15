@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class Translator:
     
-    def __init__(self, source_language, target_language, max_length=500, model_id="facebook/nllb-200-distilled-600M", pipe_line="translation", batch_size=128, n_proc=4) -> None:
+    def __init__(self, source_language, target_language, max_length=500, model_id="alirezamsh/small100", pipe_line="translation", batch_size=128, n_proc=4) -> None:
         self.logger = logger or logging.getLogger(__name__)
         self.logger.debug("Initializing Translator...")
         self.source = source_language

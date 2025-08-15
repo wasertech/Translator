@@ -13,8 +13,9 @@ from datasets import load_dataset, Dataset
 from halo import Halo
 import pyarrow as pa
 import pyarrow.compute as compute
-from translator import Translator, utils, __version__
-from translator.language import get_nllb_lang, get_sys_lang_format
+from translator import utils, __version__
+from translator.translate import Translator
+from translator.language import get_nllb_lang, get_m2m_lang, get_sys_lang_format, get_lang_from_code
 
 logging.getLogger('transformers.pipelines.base').setLevel(logging.ERROR)
 logger = logging.Logger(__file__)
@@ -85,7 +86,7 @@ def _log(msg, logger=None, spinner=None, _type="info"):
         print(msg)
     return msg
 
-def print_version(version, prefix="Translator version:", _from="eng_Latn", _to=get_sys_lang_format(), is_interactive=False, spinner=None, logger=None, max_length=max_translation_lenght, model_id=default_translator_model, pipeline=default_translator_pipeline, batch_size=1, nproc=1):
+def print_version(version, prefix="Translator version:", _from="en", _to=get_sys_lang_format(), is_interactive=False, spinner=None, logger=None, max_length=max_translation_lenght, model_id=default_translator_model, pipeline=default_translator_pipeline, batch_size=1, nproc=1):
     v = None
 
     if _to == _from:
@@ -183,6 +184,8 @@ def main():
         _log("Language list:", logger, spinner, 'info')
         if args.model_id == "facebook/nllb-200-distilled-600M":
             for l in get_nllb_lang(): print(f"- {l}")
+        elif args.model_id == "alirezamsh/small100":
+            for l in get_m2m_lang(): print(f"- {l}")
         else:
             raise NotImplementedError(f"{args.model_id=} language list not implemented.")
         print()
@@ -254,7 +257,7 @@ def main():
             _log("Exiting.", logger, spinner, 'info')
             sys.exit(1)
         
-        _from = get_nllb_lang(source_language)
+        _from = get_lang_from_code(source_language)
         _log(f"Translating from {_from}.", logger, spinner, 'info')
         
         # Prompt target language
@@ -263,7 +266,7 @@ def main():
             _log("Exiting.", logger, spinner, 'info')
             sys.exit(1)
         
-        _to = get_nllb_lang(target_language)
+        _to = get_lang_from_code(target_language)
         _log(f"Translating to {_to}.", logger, spinner, 'info')
 
         # Translate prompt loop
@@ -357,18 +360,29 @@ def main():
         sys.exit(1)
 
     for _lang in [_from, _to]:
-        if _lang not in get_nllb_lang() and args.model_id == "facebook/nllb-200-distilled-600M":
+        if any([
+            _lang not in get_nllb_lang() and args.model_id == "facebook/nllb-200-distilled-600M",
+            _lang not in get_m2m_lang() and args.model_id == "alirezamsh/small100",
+        ]):
             _log(f"Warning! {_lang} is not listed as supported language by the current model {args.model_id}.", logging, spinner, 'warning')
             print("There is a high probability translation will fail.")
             print("Type translate --language_list to get the full list of supported languages.")
             print("Or type \'translate --help\' to get help.")
-            _nllb_lang = get_nllb_lang(_lang)
-            if _lang == _from:
-                _from = _nllb_lang
-            elif _lang == _to:
-                _to = _nllb_lang
-            _log(f"Using {_nllb_lang} instead of {_lang}.", logger, spinner, 'info')
-    
+            if args.model_id == "facebook/nllb-200-distilled-600M":
+                _nllb_lang = get_nllb_lang(_lang)
+                if _lang == _from:
+                    _from = _nllb_lang
+                elif _lang == _to:
+                    _to = _nllb_lang
+                _log(f"Using {_nllb_lang} instead of {_lang}.", logger, spinner, 'info')
+            elif args.model_id == "alirezamsh/small100":
+                _m2m_lang = get_m2m_lang(_lang)
+                if _lang == _from:
+                    _from = _m2m_lang
+                elif _lang == _to:
+                    _to = _m2m_lang
+                _log(f"Using {_m2m_lang} instead of {_lang}.", logger, spinner, 'info')
+
     if _from == _to:
         _log(f"Warning! {_from=} == {_to=} ", logger, spinner, 'warning')
         print("Translating to the same language is computationally wasteful for no valid reason.")
