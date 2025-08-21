@@ -1,12 +1,12 @@
 # Interpres — Translator
 
-Translate text and files between languages using Hugging Face translation models (default: [`facebook/nllb-200-distilled-600M`](https://huggingface.co/facebook/nllb-200-distilled-600M)).
+Translate text and files between languages using Hugging Face translation models (default: Meta NLLB).
 
 Interpres (Translator) is a lightweight CLI and Python package for fast, batch-friendly translation workflows. It supports single-sentence translation, directory and file translation, and robust PO (gettext) file handling for localization workflows.
 
 ## Key features
 - CLI + Python API
-- Default model: facebook/nllb-200-distilled-600M (configurable)
+- Default model: [`facebook/nllb-200-distilled-600M`](https://huggingface.co/facebook/nllb-200-distilled-600M) (configurable)
 - Fast batch translation with configurable batch size, epochs, and parallelism
 - Full support for PO files: preserves metadata, comments, and structure; translates only untranslated entries by default; force retranslate option
 - Language list compatible with NLLB (200+ languages)
