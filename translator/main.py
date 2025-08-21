@@ -368,7 +368,7 @@ def main():
                 _to = _nllb_lang
             _log(f"Using {_nllb_lang} instead of {_lang}.", logger, spinner, 'info')
     
-    if _from == _to:
+    if _from == _to and not _po_mode:
         _log(f"Warning! {_from=} == {_to=} ", logger, spinner, 'warning')
         print("Translating to the same language is computationally wasteful for no valid reason.")
         _log("Using Hitchens's razor to shortcut translation.", logger, spinner, 'info')
@@ -378,7 +378,10 @@ def main():
             else:
                 utils.save_txt(_sentences, Path(_save_path))
         else:
-            txt_files = list(set(utils.glob_files_from_dir(_directory, suffix=".txt")) - set([_save_path, f"{_directory}/{_save_path}"]) - set(utils.glob_files_from_dir(f"{_save_path.replace('.txt', f'.{_from}.{_to}.tmp.cache')}", suffix="*")))
+            if not _save_path:
+                txt_files = utils.glob_files_from_dir(_directory, suffix=".txt")
+            else:
+                txt_files = list(set(utils.glob_files_from_dir(_directory, suffix=".txt")) - set([_save_path, f"{_directory}/{_save_path}"]) - set(utils.glob_files_from_dir(f"{_save_path.replace('.txt', f'.{_from}.{_to}.tmp.cache')}", suffix="*")))
             if not txt_files:
                 _log(f"No files to translate in \'{args.directory}\'.", logger, spinner, 'error')
                 sys.exit(1)
