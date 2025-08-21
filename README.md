@@ -130,7 +130,13 @@ Checkout [`LANGS`](translator/language.py) to see the full list of supported lan
 - Use custom models: choosing a language-pair-specific or domain-specific model (or fine-tuning one on your data) often improves translation quality and consistency, especially for specialized content such as legal texts, technical docs, or websites.
 
 ## License
-- Mozilla Public License 2.0 — see [LICENSE](LICENSE)
+Mozilla Public License 2.0 — see [LICENSE](LICENSE)
+
+Using this tool to translate a sentence, the licence of the original sentence still applies unless specified otherwise.
+
+Meaning, if you translate a sentence under [Creative Commons CC0](https://creativecommons.org/share-your-work/public-domain/cc0/), the translation is also under Creative Commons CC0.
+
+Idem for any licence.
 
 ## Contribute & sponsor
 - [Share and talk](https://github.com/wasertech/Translator/discussions/categories/show-and-tell) about translations models you like to use and tell us why.
