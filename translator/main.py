@@ -18,7 +18,12 @@ from translator.language import get_nllb_lang, get_sys_lang_format
 
 logging.getLogger('transformers.pipelines.base').setLevel(logging.ERROR)
 logger = logging.Logger(__file__)
-locale.setlocale(locale.LC_ALL, '')
+try:
+    locale.setlocale(locale.LC_ALL, '')
+except locale.Error:
+    # Ignore locale errors in minimal environments (e.g., Makefiles, containers)
+    # Core functionality doesn't depend on locale setting
+    pass
 
 try:
     set_start_method("spawn")
