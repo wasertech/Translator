@@ -49,7 +49,7 @@ def parse_arguments():
     argument_parse.add_argument('--po', action='store_true', help="Translate PO (Portable Object) files instead of text files.")
     argument_parse.add_argument('--force', action='store_true', help="Force translation ignoring cache (text files) or translate all entries including translated ones (PO files).")
     argument_parse.add_argument('-S', '--save', type=str, help="Path to text file to save translations.")
-    argument_parse.add_argument('-l', '--max_length', default=max_translation_lenght, help="Max length of output.")
+    argument_parse.add_argument('-l', '--max_length', default=max_translation_lenght, type=int, help="Max length of output.")
     argument_parse.add_argument('-m', '--model_id', default=default_translator_model, help="HuggingFace model ID to use.")
     argument_parse.add_argument('-p', '--pipeline', default=default_translator_pipeline, help="Pipeline task to use.")
     argument_parse.add_argument('-b', '--batch_size', default=128, type=int, help="Number of sentences to batch for translation.")
